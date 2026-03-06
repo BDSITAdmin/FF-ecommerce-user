@@ -1,8 +1,18 @@
+"use client";
+
 import Image from "next/image";
 import { Search, ShoppingCart, User } from "lucide-react";
+import { useSelector } from "react-redux";
 import Logo from "../public/assate/Layer_1.png";
 
 export default function Header() {
+  const user = useSelector((state: { user: { user: any } }) => state.user.user);
+  const userName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+    user?.name ||
+    user?.email ||
+    "Guest";
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-[#181818] text-green-800 shadow-sm">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
@@ -45,17 +55,21 @@ export default function Header() {
           <button className="md:hidden rounded-full p-2.5 hover:bg-green-100">
             <Search className="h-6 w-6 text-green-700" />
           </button>
-
-          <button className="rounded-full p-2.5 hover:bg-green-100">
-            <User className="h-6 w-6 text-white" />
-          </button>
-
           <button className="relative rounded-full p-2.5 hover:bg-green-100">
             <ShoppingCart className="h-6 w-6 text-white" />
             <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
               3
             </span>
           </button>
+
+          <button className="rounded-full p-2.5 hover:bg-green-100 flex items-center gap-2">
+            <User className="h-6 w-6 text-white" />
+            <span className="hidden lg:inline text-sm font-medium text-white max-w-32 truncate">
+              {userName}
+            </span>
+          </button>
+
+
         </div>
       </div>
 

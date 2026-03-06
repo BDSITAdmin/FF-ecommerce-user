@@ -18,7 +18,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        await api.post("/auth/refresh");
+        await api.post("/api/v1/auth/refresh");
         return api(originalRequest);
       } catch (err) {
         window.location.href = "/login";

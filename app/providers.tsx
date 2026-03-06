@@ -12,7 +12,10 @@ function AuthInitializer({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     getCurrentUser()
-      .then((res) => dispatch(setUser(res.data.user)))
+      .then((res) => {
+        const currentUser = res?.data?.user ?? res?.data?.data?.user ?? null;
+        if (currentUser) dispatch(setUser(currentUser));
+      })
       .catch(() => {});
   }, [dispatch]);
 

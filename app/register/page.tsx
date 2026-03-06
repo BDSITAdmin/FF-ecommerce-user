@@ -74,20 +74,28 @@ export default function Register() {
     try {
       setIsLoading(true);
       setErrors({});
-      await api.post("/auth/register", {
-        email: form.email.trim(),
-        password: form.password,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        confirmPassword: form.confirmPassword,
-        role: "user",
-      });
+      await api.post(
+        "/api/v1/auth/register",
+        {
+          email: form.email.trim(),
+          password: form.password,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          confirmPassword: form.confirmPassword,
+          role: "user",
+        }
+      );
       router.push("/login");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as any).response?.data?.message === "string"
+          ? (error as any).response.data.message
+          : "Registration failed. Please check details and try again.";
       setErrors({
-        general:
-          error?.response?.data?.message ||
-          "Registration failed. Please check details and try again.",
+        general: message,
       });
     } finally {
       setIsLoading(false);

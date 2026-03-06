@@ -53,7 +53,7 @@ export default function Login() {
 
     try {
       setErrors({});
-      await login(form, rememberMe);
+      await login(form);
       router.push("/"); // Redirect to homepage after successful login
     } catch (error: unknown) {
       const message =

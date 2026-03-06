@@ -33,7 +33,6 @@ export default function HomeProductsSection() {
   const [wishlist, setWishlist] = useState<string[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const savedWishlist = localStorage.getItem("wishlist");
     if (savedWishlist) {
       setWishlist(JSON.parse(savedWishlist));
@@ -47,7 +46,6 @@ export default function HomeProductsSection() {
           sortBy: "createdAt",
           sortOrder: "desc",
         },
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
       .then((res) => {
         const apiProducts = res?.data?.data?.products ?? [];

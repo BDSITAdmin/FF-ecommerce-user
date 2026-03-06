@@ -9,11 +9,10 @@ export const useAuth = () => {
   const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
 
-  const login = async (data, rememberMe = false) => {
+  const login = async (data) => {
     setIsLoading(true);
     try {
-      const payload = { ...data, rememberMe };
-      const res = await loginUser(payload);
+      const res = await loginUser(data);
       dispatch(setUser(res?.data?.user));
       return res;
     } catch (error) {
