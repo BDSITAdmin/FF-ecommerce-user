@@ -13,9 +13,27 @@ export const useAuth = () => {
     setIsLoading(true);
     try {
       const res = await loginUser(data);
-      dispatch(setUser(res?.data?.user));
+      const currentUser =
+        res?.data?.user ??
+        res?.data?.data?.user ??
+        res?.data?.data ??
+        null;
+      if (currentUser) {
+        dispatch(setUser(currentUser));
+      }
       return res;
     } catch (error) {
+      const status = error?.response?.status;
+      const retryAfterHeader = error?.response?.headers?.["retry-after"];
+      const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+
+      if (status === 429) {
+        const waitSeconds = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? retryAfterSeconds
+          : 60;
+        throw new Error(`Too many attempts, try again in ${waitSeconds} seconds.`);
+      }
+
       const message =
         error?.response?.data?.message ||
         error?.message ||

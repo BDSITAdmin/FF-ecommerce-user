@@ -1,17 +1,64 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, ShoppingCart, User } from "lucide-react";
+import {
+  Search,
+  ShoppingCart,
+  ChevronDown,
+  UserCircle2,
+  LogOut,
+} from "lucide-react";
 import { useSelector } from "react-redux";
+import { useAuth } from "../hooks/useAuth";
 import Logo from "../public/assate/Layer_1.png";
 
+type RootState = {
+  user: { user: any };
+  cart: { items: unknown[] };
+};
+
 export default function Header() {
-  const user = useSelector((state: { user: { user: any } }) => state.user.user);
+  const router = useRouter();
+  const { logoutAction } = useAuth();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const user = useSelector((state: RootState) => state.user.user);
+  const cartItems = useSelector((state: RootState) => state.cart.items);
+
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const userName =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-    user?.name ||
-    user?.email ||
+    user?.firstName?.trim() ||
+    (user?.name ? String(user.name).split(" ")[0] : "") ||
     "Guest";
+  const isLoggedIn = Boolean(user);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      if (isLoggedIn) {
+        await logoutAction();
+      }
+    } finally {
+      setShowLogoutConfirm(false);
+      setIsMenuOpen(false);
+      router.push("/login");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-[#181818] text-green-800 shadow-sm">
@@ -28,7 +75,7 @@ export default function Header() {
         </div>
 
         <nav className="hidden md:flex items-center space-x-8 text-sm font-semibold">
-          <a href="/shop" className="transition-colors hover:text-green-700 text-white">
+          <a href="/products" className="transition-colors hover:text-green-700 text-white">
             SHOP
           </a>
           <a href="/deals" className="transition-colors hover:text-green-700 text-white">
@@ -55,27 +102,51 @@ export default function Header() {
           <button className="md:hidden rounded-full p-2.5 hover:bg-green-100">
             <Search className="h-6 w-6 text-green-700" />
           </button>
-          <button className="relative rounded-full p-2.5 hover:bg-green-100">
+
+          <Link href="/cart" className="relative rounded-full p-2.5 hover:bg-green-100">
             <ShoppingCart className="h-6 w-6 text-white" />
-            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
-              3
-            </span>
-          </button>
+            {cartItems.length > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+                {cartItems.length}
+              </span>
+            )}
+          </Link>
 
-          <button className="rounded-full p-2.5 hover:bg-green-100 flex items-center gap-2">
-            <User className="h-6 w-6 text-white" />
-            <span className="hidden lg:inline text-sm font-medium text-white max-w-32 truncate">
-              {userName}
-            </span>
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className="rounded-full px-3 py-2 hover:bg-green-100 flex items-center gap-2"
+            >
+              <span className="text-sm font-medium text-white max-w-32 truncate">{userName}</span>
+              <ChevronDown className="h-4 w-4 text-white" />
+            </button>
 
-
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+                <Link
+                  href="/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <UserCircle2 className="h-4 w-4" />
+                  Update Profile
+                </Link>
+                <button
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="border-t border-green-200 md:hidden">
         <div className="container mx-auto flex items-center justify-around py-3 text-base font-semibold">
-          <a href="/shop" className="flex flex-col items-center text-green-800 hover:text-green-600">
+          <a href="/products" className="flex flex-col items-center text-green-800 hover:text-green-600">
             <span>SHOP</span>
           </a>
           <a href="/deals" className="flex flex-col items-center text-green-800 hover:text-green-600">
@@ -89,6 +160,31 @@ export default function Header() {
           </a>
         </div>
       </div>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-gray-900">Do you want to logout?</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              You will need to login again to access your account.
+            </p>
+            <div className="mt-5 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                No
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
