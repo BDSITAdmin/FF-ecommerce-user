@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import api from "@/services/api";
 import type { Product } from "@/types/product";
@@ -18,7 +19,9 @@ import {
 } from "lucide-react";
 
 export default function HomeProductsSection() {
+  const router = useRouter();
   const dispatch = useDispatch();
+  const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const cartItems = useSelector((state: { cart: { items: unknown[] } }) => state.cart.items);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +101,10 @@ export default function HomeProductsSection() {
   const quickAddToCart = (product: Product, e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     dispatch(addToCart(product));
   };
 

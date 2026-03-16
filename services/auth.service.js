@@ -9,5 +9,5 @@ export const logoutUser = () => {
 };
 
 export const getCurrentUser = () => {
-  return api.get("api/v1/auth/me");
+  return api.get("api/v1/auth/me", { skipAuthRefresh: true });
 };

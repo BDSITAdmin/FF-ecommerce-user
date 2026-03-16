@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, Tag, ArrowRight, ShoppingBag, Shield, Truck, Leaf } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart, removeFromCart, removeSingleFromCart } from "../../store/cartSlice";
-import { useRequireAuth } from "../../hooks/useRequireAuth";
 import Navbar from "../../components/Navbar";
 
 type CartItem = {
@@ -20,15 +20,26 @@ type RootState = {
   cart: {
     items: CartItem[];
   };
+  user: {
+    user: unknown;
+  };
 };
 
 export default function CartPage() {
-  useRequireAuth();
-
+  const router = useRouter();
   const dispatch = useDispatch();
   const cartItems = useSelector((state: RootState) => state.cart.items);
+  const user = useSelector((state: RootState) => state.user.user);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+
+  const handleAddToCart = (item: CartItem) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    dispatch(addToCart(item));
+  };
 
   const groupedItems = useMemo(() => {
     const map = new Map<string | number, CartItem & { quantity: number }>();
@@ -107,7 +118,7 @@ export default function CartPage() {
                 <h2 className="text-2xl font-semibold text-black">
                   Cart Items ({groupedItems.length})
                 </h2>
-                <span className="text-black text-sm font-medium">Free shipping on orders over $100</span>
+                <span className="text-black text-sm font-medium">Free shipping on orders over ₹100</span>
               </div>
 
               <div className="space-y-4">
@@ -138,7 +149,7 @@ export default function CartPage() {
                           Quantity: {item.quantity}
                         </p>
                         <p className="text-3xl font-bold text-black mt-2">
-                          ${Number(item.price).toLocaleString()}
+                          ₹{Number(item.price).toLocaleString()}
                         </p>
                       </div>
 
@@ -164,7 +175,7 @@ export default function CartPage() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => dispatch(addToCart(item))}
+                            onClick={() => handleAddToCart(item)}
                             className="w-8 h-8 rounded-full bg-white text-black hover:bg-green-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
                             aria-label={`Increase quantity of ${item.name}`}
                           >
@@ -200,27 +211,27 @@ export default function CartPage() {
               <div className="space-y-4 border-b border-green-100 pb-6">
                 <div className="flex justify-between items-center">
                   <span className="text-black">Subtotal</span>
-                  <span className="font-semibold text-black text-lg">${subtotal}</span>
+                  <span className="font-semibold text-black text-lg">₹{subtotal}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-black flex items-center gap-1">
                     Discount (20% OFF)
                     <Tag className="w-4 h-4 text-green-500" />
                   </span>
-                  <span className="font-semibold text-black">-${discount}</span>
+                  <span className="font-semibold text-black">-₹{discount}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-black flex items-center gap-1">
                     Delivery Fee
                     <Truck className="w-4 h-4 text-green-500" />
                   </span>
-                  <span className="font-semibold text-black">${deliveryFee}</span>
+                  <span className="font-semibold text-black">₹{deliveryFee}</span>
                 </div>
               </div>
 
               <div className="flex justify-between items-center mt-6 mb-6">
                 <span className="text-xl text-black font-medium">Total</span>
-                <span className="text-4xl font-bold text-black">${total}</span>
+                <span className="text-4xl font-bold text-black">₹{total}</span>
               </div>
 
               {/* Promo Code */}

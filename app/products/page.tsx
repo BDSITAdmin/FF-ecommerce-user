@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,7 +33,9 @@ type Product = {
 };
 
 export default function ProductsPage() {
+  const router = useRouter();
   const dispatch = useDispatch();
+  const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const cartItems = useSelector((state: { cart: { items: unknown[] } }) => state.cart.items);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,6 +138,10 @@ export default function ProductsPage() {
   const quickAddToCart = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     dispatch(addToCart(product));
 
     // Show temporary feedback
