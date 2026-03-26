@@ -1,5 +1,8 @@
 export type Product = {
   id: string;
+  _id?: string;
+  productId?: string;
+  product_id?: string;
   name: string;
   price: number | string;
   images?: string[];

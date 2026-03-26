@@ -1,8 +1,8 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialUser = typeof window !== "undefined"
-  ? JSON.parse(localStorage.getItem("user"))
-  : null;
+const initialUser = globalThis.window === undefined
+  ? null
+  : JSON.parse(localStorage.getItem("user"));
 
 const userSlice = createSlice({
   name: "user",

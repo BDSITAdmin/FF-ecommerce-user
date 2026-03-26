@@ -1,133 +1,204 @@
-// hooks/useCheckoutForm.ts
-import { useState, useCallback } from 'react';
-import { CheckoutFormData, FormErrors } from '../types/checkout';
+import { useCallback, useMemo, useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDispatch } from "react-redux";
 
-const initialFormData: CheckoutFormData = {
-  email: '',
-  firstName: '',
-  lastName: '',
-  address: '',
-  apartment: '',
-  city: '',
-  state: '',
-  zipCode: '',
-  country: 'IN',
-  phone: '',
-  paymentMethod: 'upi',
-  upiId: '',
-  cardNumber: '',
-  cardExpiry: '',
-  cardCvc: '',
-  saveInfo: false,
-};
+import { clearCartAsync } from "../store/cartSlice";
+import {
+  CheckoutFormData,
+  checkoutSchema,
+  addressSchema,
+  shippingSchema,
+  paymentSchema,
+} from "../types/checkout";
+
+import { checkout, verifyRazorpayPayment } from "../services/checkout.service";
+import {
+  openRazorpayCheckout,
+  RazorpayPaymentResponse,
+} from "../services/razorpay-checkout";
+
+type Step = "address" | "shipping" | "payment" | "review";
+
+const steps: Step[] = ["address", "shipping", "payment", "review"];
 
 export const useCheckoutForm = () => {
-  const [formData, setFormData] = useState<CheckoutFormData>(initialFormData);
-  const [errors, setErrors] = useState<FormErrors>({});
+  const dispatch = useDispatch();
+
+  const [currentStep, setCurrentStep] = useState<Step>("address");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
 
-  const validateForm = useCallback((): boolean => {
-    const newErrors: FormErrors = {};
+  const stepSchemas = useMemo(() => {
+    return {
+      address: addressSchema,
+      shipping: shippingSchema,
+      payment: paymentSchema,
+      // No fields on review screen; reaching it already implies prior steps validated.
+      review: z.object({}),
+    } satisfies Record<Step, z.ZodTypeAny>;
+  }, []);
 
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
+  const form = useForm<CheckoutFormData>({
+    resolver: zodResolver(checkoutSchema),
 
-    // Personal info validation
-    if (!formData.firstName) newErrors.firstName = 'First name is required';
-    if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    if (!formData.phone) newErrors.phone = 'Phone number is required';
+    // 🔥 MUST MATCH schema
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      address: "",
+      apartment: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      country: "IN", // ✅ FIXED
+      paymentMethod: "RAZORPAY",
+      saveInfo: false,
+    },
 
-    // Address validation
-    if (!formData.address) newErrors.address = 'Address is required';
-    if (!formData.city) newErrors.city = 'City is required';
-    if (!formData.state) newErrors.state = 'State is required';
-    if (!formData.zipCode) newErrors.zipCode = 'ZIP code is required';
-    if (!formData.country) newErrors.country = 'Country is required';
+    mode: "onChange",
+  });
 
-    // Payment validation
-    if (formData.paymentMethod === 'upi') {
-      if (!formData.upiId) {
-        newErrors.upiId = 'UPI ID is required';
-      } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z]+$/.test(formData.upiId)) {
-        newErrors.upiId = 'UPI ID is invalid (example: name@upi)';
-      }
-    }
+  const values = form.watch();
 
-    if (formData.paymentMethod === 'card') {
-      if (!formData.cardNumber) {
-        newErrors.cardNumber = 'Card number is required';
-      } else if (!/^\d{16}$/.test(formData.cardNumber.replace(/\s/g, ''))) {
-        newErrors.cardNumber = 'Card number must be 16 digits';
-      }
+  // `react-hook-form`'s `formState.isValid` reflects the *entire* resolver schema.
+  // For a multi-step form, we want "valid for the current step" so users can proceed.
+  const isStepValid = useMemo(() => {
+    const result = stepSchemas[currentStep].safeParse(values);
+    return result.success;
+  }, [currentStep, stepSchemas, values]);
 
-      if (!formData.cardExpiry) {
-        newErrors.cardExpiry = 'Expiry date is required';
-      } else if (!/^(0[1-9]|1[0-2])\/([0-9]{2})$/.test(formData.cardExpiry)) {
-        newErrors.cardExpiry = 'Expiry date must be MM/YY';
-      }
+  const shippingAddress = useMemo(() => {
+    const {
+      firstName,
+      lastName,
+      address,
+      apartment,
+      city,
+      state,
+      zipCode,
+      phone,
+      country,
+    } = values;
 
-      if (!formData.cardCvc) {
-        newErrors.cardCvc = 'CVC is required';
-      } else if (!/^\d{3,4}$/.test(formData.cardCvc)) {
-        newErrors.cardCvc = 'CVC must be 3 or 4 digits';
-      }
-    }
+    return {
+      name: `${firstName} ${lastName}`.trim(),
+      phone,
+      street: [address, apartment].filter(Boolean).join(", "),
+      city,
+      state,
+      country,
+      zipCode,
+    };
+  }, [values]);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
+  // ─── STEP NAVIGATION ─────────────────
 
-  const handleChange = useCallback((
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+  const nextStep = useCallback(() => {
+    if (isSubmitting) return;
 
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
+    const result = stepSchemas[currentStep].safeParse(form.getValues());
+
+    if (!result.success) {
+      form.setError("root", {
+        message: "Please fix errors before continuing",
       });
+      return;
     }
-  }, [errors]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (validateForm()) {
+    const index = steps.indexOf(currentStep);
+
+    if (currentStep === "review") {
+      onSubmit(form.getValues());
+    } else {
+      setCurrentStep(steps[index + 1]);
+    }
+  }, [currentStep, form, isSubmitting, stepSchemas]);
+
+  const prevStep = useCallback(() => {
+    const index = steps.indexOf(currentStep);
+    if (index > 0) setCurrentStep(steps[index - 1]);
+  }, [currentStep]);
+
+  // ─── SUBMIT ─────────────────────────
+
+  const onSubmit: SubmitHandler<CheckoutFormData> = useCallback(
+    async (data) => {
+      if (isSubmitting) return;
+
       setIsSubmitting(true);
-      
-      // Simulate API call
+      setSubmitError("");
+      setSubmitSuccess("");
+
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('Form submitted:', formData);
-        alert('Order placed successfully!');
-        // Reset form or redirect
-      } catch (error) {
-        console.error('Submission error:', error);
-        alert('Failed to place order. Please try again.');
+        const res = await checkout({
+          shippingAddress,
+          paymentMethod: data.paymentMethod,
+        });
+
+        // ✅ COD FLOW
+        if (data.paymentMethod === "COD") {
+          setSubmitSuccess("Order placed successfully");
+          dispatch(clearCartAsync());
+          return;
+        }
+
+        const session = res?.data?.data || res?.data;
+
+        if (!session?.razorpayOrderId) {
+          throw new Error("Invalid payment session");
+        }
+
+        const payment: RazorpayPaymentResponse =
+          await openRazorpayCheckout({
+            key: session.key,
+            order_id: session.razorpayOrderId,
+            amount: session.amount,
+            currency: "INR",
+
+            name: "Ecommerce",
+            description: "Order Payment",
+
+            prefill: {
+              name: shippingAddress.name,
+              email: data.email,
+              contact: data.phone,
+            },
+          });
+
+        // ✅ FIXED (no spread error)
+        await verifyRazorpayPayment({
+          razorpay_payment_id: payment.razorpay_payment_id,
+          razorpay_order_id: payment.razorpay_order_id,
+          razorpay_signature: payment.razorpay_signature,
+          checkoutId: session.checkoutId,
+        });
+
+        setSubmitSuccess("Payment successful ✅");
+        dispatch(clearCartAsync());
+      } catch (error: any) {
+        setSubmitError(error?.message || "Something went wrong");
       } finally {
         setIsSubmitting(false);
       }
-    }
-  }, [formData, validateForm]);
+    },
+    [dispatch, shippingAddress, isSubmitting]
+  );
 
   return {
-    formData,
-    errors,
+    form,
+    currentStep,
+    nextStep,
+    prevStep,
     isSubmitting,
-    handleChange,
-    handleSubmit,
+    submitError,
+    submitSuccess,
+    formErrors: form.formState.errors,
+    shippingAddress,
+    isValid: isStepValid,
   };
 };

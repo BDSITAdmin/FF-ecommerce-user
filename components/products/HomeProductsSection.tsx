@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import api from "@/services/api";
 import type { Product } from "@/types/product";
-import { addToCart } from "@/store/cartSlice";
+import { addToCartAsync } from "@/store/cartSlice";
 import {
   Search,
   SlidersHorizontal,
@@ -20,7 +20,7 @@ import {
 
 export default function HomeProductsSection() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const cartItems = useSelector((state: { cart: { items: unknown[] } }) => state.cart.items);
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,11 +52,18 @@ export default function HomeProductsSection() {
       })
       .then((res) => {
         const apiProducts = res?.data?.data?.products ?? [];
-        const productsWithRating = apiProducts.map((p: Product) => ({
-          ...p,
-          rating: Math.floor(Math.random() * 5) + 1,
-          reviews: Math.floor(Math.random() * 100),
-        }));
+        const productsWithRating = (apiProducts as Product[])
+          .map((p) => {
+            const id = p.id ?? p._id ?? p.productId ?? p.product_id;
+            if (!id) return null;
+            return {
+              ...p,
+              id: String(id),
+              rating: Math.floor(Math.random() * 5) + 1,
+              reviews: Math.floor(Math.random() * 100),
+            };
+          })
+          .filter(Boolean) as Product[];
         setProducts(productsWithRating);
       })
       .catch(() => {
@@ -81,7 +88,7 @@ export default function HomeProductsSection() {
 
   const filteredProducts = [...products]
     .filter((p) => (inStockOnly ? Number(p.stock || 0) > 0 : true))
-    .filter((p) => (selectedCategory !== "All" ? p.category === selectedCategory : true))
+    .filter((p) => (selectedCategory === "All" ? true : p.category === selectedCategory))
     .filter((p) =>
       search.trim()
         ? p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -105,7 +112,7 @@ export default function HomeProductsSection() {
       router.push("/login");
       return;
     }
-    dispatch(addToCart(product));
+    dispatch((addToCartAsync as any)({ product, quantity: 1 }));
   };
 
   return (
@@ -351,7 +358,7 @@ export default function HomeProductsSection() {
 
                           {product.rating && (
                             <div className="flex items-center gap-1 mt-2">
-                              {[...Array(5)].map((_, i) => (
+                              {[...new Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
                                   className={`w-4 h-4 ${i < product.rating!

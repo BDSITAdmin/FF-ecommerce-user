@@ -6,10 +6,11 @@ import type { ReactNode } from "react";
 import { Provider, useDispatch } from "react-redux";
 import { store } from "../store/store";
 import { setUser } from "../store/userSlice";
+import { fetchCart } from "../store/cartSlice";
 import { getCurrentUser } from "../services/auth.service";
 
 function AuthInitializer({ children }: { children: ReactNode }) {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
 
   useEffect(() => {
     getCurrentUser()
@@ -19,7 +20,10 @@ function AuthInitializer({ children }: { children: ReactNode }) {
           res?.data?.data?.user ??
           res?.data?.data ??
           null;
-        if (currentUser) dispatch(setUser(currentUser));
+        if (currentUser) {
+          dispatch(setUser(currentUser));
+          dispatch(fetchCart() as any);
+        }
       })
       .catch(() => {});
   }, [dispatch]);
@@ -27,7 +31,7 @@ function AuthInitializer({ children }: { children: ReactNode }) {
   return children;
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body>

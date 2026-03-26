@@ -9,10 +9,10 @@ const MAX_REFRESH_ATTEMPTS = 3;
 let refreshAttempts = 0;
 
 const forceLogout = () => {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.href = "/login";
+  globalThis.location.href = "/login";
 };
 
 const isAuthRoute = (url = "") => {
@@ -23,6 +23,21 @@ const isAuthRoute = (url = "") => {
     "/api/v1/auth/logout",
   ].some((route) => url.includes(route));
 };
+
+api.interceptors.request.use((config) => {
+  const requestUrl = config?.url || "";
+  if (globalThis.window === undefined) return config;
+  if (isAuthRoute(requestUrl)) return config;
+
+  const token = localStorage.getItem("token");
+  if (!token) return config;
+
+  config.headers = config.headers || {};
+  if (!config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 api.interceptors.response.use(
   (response) => response,
@@ -38,7 +53,7 @@ api.interceptors.response.use(
     ) {
       if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
         forceLogout();
-        return Promise.reject(error);
+        throw error;
       }
 
       originalRequest._retry = true;
@@ -59,7 +74,7 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
+    throw error;
   }
 );
 

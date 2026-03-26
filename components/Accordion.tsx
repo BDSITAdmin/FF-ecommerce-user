@@ -9,7 +9,7 @@ type AccordionItem = {
   answer: string;
 };
 
-export default function Accordion({ items }: { items: AccordionItem[] }) {
+export default function Accordion({ items }: Readonly<{ items: AccordionItem[] }>) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {

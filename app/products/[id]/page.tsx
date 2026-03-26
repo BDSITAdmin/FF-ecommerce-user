@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../../../services/api";
-import { addToCart } from "../../../store/cartSlice";
+import { addToCartAsync } from "../../../store/cartSlice";
 import Navbar from "../../../components/Navbar";
 import Accordion from "../../../components/Accordion";
 import IxanBottle from "@/public/assate/Front@2x 1.png";
@@ -193,7 +193,7 @@ const testimonials = [
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -237,7 +237,7 @@ export default function ProductDetails() {
       return;
     }
     for (let i = 0; i < quantity; i += 1) {
-      dispatch(addToCart(product));
+      dispatch((addToCartAsync as any)({ product, quantity: 1 }));
     }
   };
 

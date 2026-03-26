@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addToCart } from "../../store/cartSlice";
+import { addToCartAsync } from "../../store/cartSlice";
 import api from "../../services/api";
 import {
   Search,
@@ -34,7 +34,7 @@ type Product = {
 
 export default function ProductsPage() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const cartItems = useSelector((state: { cart: { items: unknown[] } }) => state.cart.items);
   const [products, setProducts] = useState<Product[]>([]);
@@ -67,11 +67,18 @@ export default function ProductsPage() {
       .then((res) => {
         const apiProducts = res?.data?.data?.products ?? [];
         // Add mock ratings for demonstration
-        const productsWithRating = apiProducts.map((p: Product) => ({
-          ...p,
-          rating: Math.floor(Math.random() * 5) + 1,
-          reviews: Math.floor(Math.random() * 100)
-        }));
+        const productsWithRating = (apiProducts as Product[])
+          .map((p) => {
+            const id = (p as any)?.id ?? (p as any)?._id ?? (p as any)?.productId ?? (p as any)?.product_id;
+            if (!id) return null;
+            return {
+              ...p,
+              id: String(id),
+              rating: Math.floor(Math.random() * 5) + 1,
+              reviews: Math.floor(Math.random() * 100),
+            };
+          })
+          .filter(Boolean) as Product[];
         setProducts(productsWithRating);
       })
       .catch((err) => {
@@ -142,7 +149,7 @@ export default function ProductsPage() {
       router.push("/login");
       return;
     }
-    dispatch(addToCart(product));
+    dispatch((addToCartAsync as any)({ product, quantity: 1 }));
 
     // Show temporary feedback
     const button = e.currentTarget;
@@ -177,7 +184,7 @@ export default function ProductsPage() {
             <p className="text-xl font-semibold mb-2">Oops! Something went wrong</p>
             <p className="text-red-500">{error}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => globalThis.location.reload()}
               className="mt-4 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
             >
               Try Again
@@ -189,7 +196,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <main className="min-h-screen bg-linear-to-b from-gray-50 to-white">
       <Navbar />
 
       {/* Header Section */}
@@ -197,7 +204,7 @@ export default function ProductsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-linear-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent">
                 Best Selling Products
               </h1>
               <p className="text-gray-500 text-sm mt-1">
@@ -234,7 +241,7 @@ export default function ProductsPage() {
               {/* Cart Button */}
               <Link
                 href="/cart"
-                className="relative p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                className="relative p-3 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-full hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 <ShoppingBag className="w-5 h-5" />
                 {cartItems.length > 0 && (
@@ -464,7 +471,7 @@ export default function ProductsPage() {
                           {/* Rating */}
                           {product.rating && (
                             <div className="flex items-center gap-1 mt-2">
-                              {[...Array(5)].map((_, i) => (
+                              {[...new Array(5)].map((_, i) => (
                                 <Star
                                   key={i}
                                   className={`w-4 h-4 ${i < product.rating!

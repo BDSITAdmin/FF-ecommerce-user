@@ -4,7 +4,7 @@ type Props = {
   product: Product;
 };
 
-export default function ProductCard({ product }: Props) {
+export default function ProductCard({ product }: Readonly<Props>) {
   return (
     <div className="bg-white rounded-2xl shadow-sm p-5">
       <img
