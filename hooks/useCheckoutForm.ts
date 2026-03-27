@@ -189,6 +189,8 @@ export const useCheckoutForm = () => {
     [dispatch, shippingAddress, isSubmitting]
   );
 
+  const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);
+
   return {
     form,
     currentStep,
@@ -200,5 +202,6 @@ export const useCheckoutForm = () => {
     formErrors: form.formState.errors,
     shippingAddress,
     isValid: isStepValid,
+    submitOrder,
   };
 };

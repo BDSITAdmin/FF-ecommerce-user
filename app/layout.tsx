@@ -8,6 +8,7 @@ import { store } from "../store/store";
 import { setUser } from "../store/userSlice";
 import { fetchCart } from "../store/cartSlice";
 import { getCurrentUser } from "../services/auth.service";
+import Footer from "../components/Footer";
 
 function AuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useDispatch<any>();
@@ -36,7 +37,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en">
       <body>
         <Provider store={store}>
-          <AuthInitializer>{children}</AuthInitializer>
+          <AuthInitializer>
+            {children}
+            <Footer />
+          </AuthInitializer>
         </Provider>
       </body>
     </html>

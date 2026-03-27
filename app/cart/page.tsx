@@ -71,6 +71,7 @@ export default function CartPage() {
     (sum, item) => sum + Number(item.price || 0) * item.quantity,
     0
   );
+  const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
 
   
@@ -96,15 +97,15 @@ export default function CartPage() {
         </div> */}
 
         {groupedItems.length === 0 ? (
-          <div className="backdrop-blur-sm border border-green-100 rounded-3xl p-16 text-center shadow-xl">
-            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ShoppingBag className="w-12 h-12 text-black" />
+          <div className="backdrop-blur-sm border border-[#0065A6] rounded-3xl p-16 text-center shadow-xl">
+            <div className="w-24 h-24 bg-[#0065A6] rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShoppingBag className="w-12 h-12 text-white" />
             </div>
             <h2 className="text-3xl font-semibold text-black mb-3">Your cart is empty</h2>
             <p className="text-black/70 mb-8">Looks like you haven&apos;t added anything yet</p>
             <Link
-              href="/products"
-              className="inline-flex items-center gap-2 bg-green-600 text-white px-8 py-4 rounded-full font-medium hover:bg-green-700 transition-all shadow-lg shadow-green-600/30"
+              href="/"
+              className="inline-flex items-center gap-2 bg-[#0065A6] text-white px-8 py-4 rounded-full font-medium transition-all shadow-lg "
             >
               Continue Shopping
               <ArrowRight className="w-4 h-4" />
@@ -135,11 +136,11 @@ export default function CartPage() {
                   return (
                     <div
                       key={item.id}
-                      className="group grid grid-cols-[100px_1fr_auto] gap-6 items-center  rounded-2xl hover:bg-green-50/50 transition-all duration-300"
+                      className="group grid grid-cols-[100px_1fr_auto] gap-6 items-center  rounded-2xl  transition-all duration-300"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
                       {/* Product Image */}
-                      <div className="w-[100px] h-[100px] rounded-xl bg-gradient-to-br from-green-100 to-green-50 overflow-hidden shadow-md group-hover:shadow-lg transition-all">
+                      <div className="w-[100px] h-[100px] rounded-xl bg-gradient-to-br from-[#0065A6]/10 to-[#0065A6]/30 overflow-hidden shadow-md group-hover:shadow-lg transition-all">
                         <img
                           src={itemImage}
                           alt={item.name}
@@ -169,13 +170,13 @@ export default function CartPage() {
                           <Trash2 className="w-6 h-6" />
                         </button>
                          <p className="text-3xl font-bold text-black">
-                          Rs. {Number(item.price).toLocaleString()}
+                          Rs. {formatAmount(Number(item.price))}
                         </p>
 
                         <div className="flex items-center gap-3   px-4 py-3 border border-[#C5C5C5]">
                           <button
                             onClick={() => dispatch(removeSingleFromCartAsync(item.id))}
-                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-green-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
                             aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus className="w-3 h-3" />
@@ -185,7 +186,7 @@ export default function CartPage() {
                           </span>
                           <button
                             onClick={() => handleAddToCart(item)}
-                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-green-600 hover:text-white transition-all flex items-center justify-center shadow-sm"
+                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
                             aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus className="w-3 h-3" />
@@ -207,7 +208,7 @@ export default function CartPage() {
                   Invoice Summary
                 </h2>
 
-                <span className="text-sm font-medium text-green-700 bg-green-50 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-[#0065A6] bg-[#0065A6]/10 px-3 py-1 rounded-full">
                   {groupedItems.length} items
                 </span>
               </div>
@@ -218,17 +219,17 @@ export default function CartPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Subtotal</span>
                   <span className="font-semibold text-black text-lg">
-                    ₹{subtotal}
+                    Rs. {formatAmount(subtotal)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 flex items-center gap-2">
                     Delivery Fee
-                    <Truck className="w-4 h-4 text-green-500" />
+                    <Truck className="w-4 h-4 text-[#0065A6]" />
                   </span>
 
-                  <span className="font-semibold text-green-600">
+                  <span className="font-semibold text-[#0065A6]">
                     Free
                   </span>
                 </div>
@@ -243,7 +244,7 @@ export default function CartPage() {
                 </span>
 
                 <span className="text-2xl font-bold text-black">
-                  ₹{subtotal}
+                  Rs. {formatAmount(subtotal)}
                 </span>
 
               </div>
@@ -251,7 +252,7 @@ export default function CartPage() {
               {/* Checkout Button */}
               <Link
                 href="/checkout"
-                className="w-full h-14 rounded-full bg-[#0065A6] text-white font-medium flex items-center justify-center gap-2 hover:bg-blue-800 transition-all shadow-lg shadow-[#0065A6]/30"
+                className="w-full h-14 rounded-full bg-[#0065A6] text-white font-medium flex items-center justify-center gap-2  transition-all shadow-lg shadow-[#0065A6]/30"
               >
                 Order Now
                 <ArrowRight className="w-4 h-4" />
@@ -283,3 +284,4 @@ export default function CartPage() {
     </main>
   );
 }
+

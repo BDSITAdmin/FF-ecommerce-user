@@ -14,6 +14,7 @@ import {
 import { useSelector } from "react-redux";
 import { useAuth } from "../hooks/useAuth";
 import Logo from "../public/assate/Layer_1.png";
+import Cart from "../public/icons/cart.svg";
 
 type RootState = {
   user: { user: unknown };
@@ -98,15 +99,15 @@ export default function Header() {
           <Image
             src={Logo}
             alt="E-commStore"
-            width={160}
-            height={56}
-            className="h-14 w-auto object-contain"
+            width={168}
+            height={42}
+            className="h-[42px] w-[168px] object-contain"
             priority
           />
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8 text-sm font-semibold">
+        {/* <nav className="hidden md:flex items-center space-x-8 text-sm font-semibold">
           <Link href="/products" className="text-white hover:text-green-700">
             SHOP
           </Link>
@@ -119,13 +120,13 @@ export default function Header() {
           <Link href="/about" className="text-white hover:text-green-700">
             ABOUT
           </Link>
-        </nav>
+        </nav> */}
 
         {/* Right Section */}
         <div className="flex items-center gap-5">
 
           {/* Search */}
-          <div className="hidden md:flex items-center rounded-full border-2 border-green-300 bg-white px-4 py-2.5 text-base focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-200">
+          {/* <div className="hidden md:flex items-center rounded-full border-2 border-green-300 bg-white px-4 py-2.5 text-base focus-within:border-green-600 focus-within:ring-2 focus-within:ring-green-200">
             <Search className="mr-2 h-5 w-5 text-green-600" />
 
             <input
@@ -133,16 +134,17 @@ export default function Header() {
               placeholder="Search products..."
               className="w-72 bg-transparent outline-none placeholder:text-green-400 text-green-800"
             />
-          </div>
+          </div> */}
 
           {/* Mobile Search */}
-          <button className="md:hidden rounded-full p-2.5 hover:bg-green-100">
+          {/* <button className="md:hidden rounded-full p-2.5 hover:bg-green-100">
             <Search className="h-6 w-6 text-green-700" />
-          </button>
+          </button> */}
 
           {/* Cart */}
-          <Link href="/cart" className="relative rounded-full p-2.5 hover:bg-green-100">
-            <ShoppingCart className="h-6 w-6 text-white" />
+          <Link href="/cart" className="relative rounded-full p-2.5">
+<Image src={Cart} alt="Cart" width={36} height={36} className="" />
+
 
             {cartItems.length > 0 && (
               <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
@@ -155,7 +157,7 @@ export default function Header() {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              className="rounded-full px-3 py-2 hover:bg-green-100 flex items-center gap-2"
+              className="rounded-full px-3 py-2 cursor-pointer flex items-center gap-2"
             >
               <span className="text-sm font-medium text-white max-w-32 truncate">
                 {userName}
@@ -190,7 +192,7 @@ export default function Header() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="border-t border-green-200 md:hidden">
+      {/* <div className="border-t border-green-200 md:hidden">
         <div className="container mx-auto flex items-center justify-around py-3 text-base font-semibold">
 
           <Link href="/products" className="text-green-800 hover:text-green-600">
@@ -210,7 +212,7 @@ export default function Header() {
           </Link>
 
         </div>
-      </div>
+      </div> */}
 
       {/* Logout Modal */}
       {showLogoutConfirm && (

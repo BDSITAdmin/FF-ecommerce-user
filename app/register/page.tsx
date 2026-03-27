@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import logo from "@/public/assate/Layer_1 (1).svg";
 import api from "../../services/api";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
@@ -108,144 +109,139 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-lime-100 flex items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl border border-green-100 bg-white">
-        <div className="hidden md:flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-green-700 p-10 text-white">
-          <div>
-            <p className="inline-block bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
-              User Signup
-            </p>
-            <h2 className="mt-6 text-4xl font-extrabold leading-tight">
-              Create Your Account and Start Shopping
-            </h2>
-            <p className="mt-4 text-emerald-100 text-base">
-              Register to track orders, save favorites, and get exclusive offers.
-            </p>
-          </div>
+    <section className="bg-[#0065A4]">
+      <div className="relative min-h-screen flex">
+        <div
+          className="absolute inset-0 bg-no-repeat bg-contain bg-center"
+          style={{ backgroundImage: "url('/assate/login-bg.png')" }}
+        />
 
-          <div className="relative mt-8 flex justify-center">
-            <Image
-              src="/assate/home-image-removebg-preview.png"
-              alt="User signup illustration"
-              width={420}
-              height={420}
-              className="w-full max-w-sm h-auto drop-shadow-2xl"
-              priority
-            />
-          </div>
-
-          <p className="text-sm text-emerald-100">
-            Fast, secure, and personalized user access.
-          </p>
-        </div>
-
-        <div className="p-6 md:p-10">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-600 rounded-2xl shadow-lg mb-4">
-              <User className="w-8 h-8 text-white" />
+        <div className="relative w-[60%] bg-white flex items-center justify-center">
+          <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6">
+            <div className="text-center">
+              <Image
+                src={logo}
+                alt="logo"
+                width={200}
+                height={80}
+                priority
+                className="mx-auto object-contain"
+              />
+              <h2 className="text-xl font-semibold mt-4 text-gray-700">
+                Create your account
+              </h2>
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
-            <p className="text-gray-600">Please fill your details to sign up</p>
-          </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-green-100 shadow-lg p-8">
-            {errors.general && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
-                {errors.general}
-              </div>
-            )}
+            {errors.general && <p className="text-red-500 text-sm">{errors.general}</p>}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-gray-700 text-sm font-semibold mb-2">First Name</label>
-                <input
-                  className={`w-full px-3 py-3 border ${errors.firstName ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="John"
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  disabled={isLoading}
-                />
-                {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
+            <div className="flex gap-4 w-[472px]">
+              <div className="flex flex-col gap-2 w-1/2">
+                <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+                  First Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    value={form.firstName}
+                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    placeholder="John"
+                    className="w-full h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                    disabled={isLoading}
+                  />
+                </div>
+                {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
               </div>
-              <div>
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Last Name</label>
-                <input
-                  className={`w-full px-3 py-3 border ${errors.lastName ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="Doe"
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  disabled={isLoading}
-                />
-                {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
+
+              <div className="flex flex-col gap-2 w-1/2">
+                <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <input
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    placeholder="Doe"
+                    className="w-full h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                    disabled={isLoading}
+                  />
+                </div>
+                {errors.lastName && <p className="text-red-500 text-sm">{errors.lastName}</p>}
               </div>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-semibold mb-2">Email Address</label>
+            <div className="flex flex-col gap-2">
+              <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+                Email
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="email"
-                  className={`w-full pl-10 pr-3 py-3 border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="user@example.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-[472px] h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
                   disabled={isLoading}
                 />
               </div>
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
             </div>
 
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-semibold mb-2">Password</label>
+            <div className="flex flex-col gap-2">
+              <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type={showPassword ? "text" : "password"}
-                  className={`w-full pl-10 pr-10 py-3 border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="Password@123"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="********"
+                  className="w-[472px] h-14 pl-12 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
             </div>
 
-            <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-semibold mb-2">Confirm Password</label>
+            <div className="flex flex-col gap-2">
+              <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+                Confirm Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  className={`w-full pl-10 pr-10 py-3 border ${errors.confirmPassword ? "border-red-500" : "border-gray-300"} rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="Password@123"
                   value={form.confirmPassword}
                   onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  placeholder="********"
+                  className="w-[472px] h-14 pl-12 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+              {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-700"} transition-all duration-200 flex items-center justify-center`}
+              className="w-[472px] h-[60px] bg-[#0065A6] text-white text-[20px] font-semibold flex items-center justify-center rounded-full hover:bg-blue-800"
             >
               {isLoading ? (
                 <>
@@ -257,15 +253,15 @@ export default function Register() {
               )}
             </button>
 
-            <p className="text-center mt-6 text-gray-600">
+            <p className="text-center font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
               Already have an account?{" "}
-              <Link href="/login" className="text-emerald-600 hover:text-emerald-800 font-semibold hover:underline">
+              <Link href="/login" className="text-[#0065A6] underline">
                 Sign in
               </Link>
             </p>
           </form>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import logo from "@/public/assate/Layer_1.png";
+import logo from "@/public/assate/Layer_1 (1).svg";
 import google from "@/public/assate/google-icon.png";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
