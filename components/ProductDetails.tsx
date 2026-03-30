@@ -431,7 +431,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 <div className="bg-[#0065A6] rounded-full w-106.75 h-106.75 flex items-center justify-center">
                   <img
                     src={IxanBottle.src}
-                    alt="product"
+                    alt="product image"
                     className="h-100.25 w-91 object-contain mt-25"
                   />
                 </div>
