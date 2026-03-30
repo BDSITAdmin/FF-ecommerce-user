@@ -73,141 +73,140 @@ const handleLogin = async () => {
 
   return (
     <section className="bg-[#0065A4]">
-      <div className="relative min-h-screen flex">
+  <div className="relative min-h-screen flex flex-col lg:flex-row">
 
-        {/* BACKGROUND IMAGE */}
-        <div
-          className="absolute inset-0 bg-no-repeat bg-contain bg-center"
-          style={{ backgroundImage: "url('/assate/login-bg.png')" }}
-        />
+    {/* BACKGROUND IMAGE */}
+    <div
+      className="absolute inset-0 bg-no-repeat bg-contain bg-center lg:block hidden"
+      style={{ backgroundImage: "url('/assate/login-bg.png')" }}
+    />
 
-        {/* LOGIN PANEL */}
-        <div className="relative w-[60%] bg-white flex items-center justify-center">
+    {/* LOGIN PANEL */}
+    <div className="relative w-full lg:w-[60%] bg-white flex items-center justify-center px-4 sm:px-6 py-10">
 
-          <form
-            onSubmit={handleSubmit}
-            className="flex flex-col items-center gap-6"
-          >
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col items-center gap-6 w-full"
+      >
 
-            {/* Logo */}
-            <div className="text-center">
-              <Image
-                src={logo}
-                alt="logo"
-                width={200}
-                height={80}
-                priority
-                className="mx-auto object-contain"
-              />
+        {/* Logo */}
+        <div className="text-center">
+          <Image
+            src={logo}
+            alt="logo"
+            width={200}
+            height={80}
+            priority
+            className="mx-auto object-contain"
+          />
 
-              <h2 className="text-xl font-semibold mt-4 text-gray-700">
-                Login to your account
-              </h2>
-            </div>
+          <h2 className="text-lg sm:text-xl font-semibold mt-4 text-gray-700">
+            Login to your account
+          </h2>
+        </div>
 
-            {/* General Error */}
-            {errors.general && (
-              <p className="text-red-500 text-sm">{errors.general}</p>
-            )}
+        {/* General Error */}
+        {errors.general && (
+          <p className="text-red-500 text-sm">{errors.general}</p>
+        )}
 
-            {/* Email */}
-            <div className="flex flex-col gap-2">
-              <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
-                Email
-              </label>
+        {/* Email */}
+        <div className="flex flex-col gap-2 w-full max-w-[472px]">
+          <label className="font-semibold text-sm sm:text-[16px]">
+            Email
+          </label>
 
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
 
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm({ ...form, email: e.target.value })
-                  }
-                  placeholder="e.g. Ramesh Kumar"
-                  className="w-[472px] h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value })
+              }
+              placeholder="e.g. Ramesh Kumar"
+              className="w-full h-12 sm:h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
 
-              </div>
+          {errors.email && (
+            <p className="text-red-500 text-sm">{errors.email}</p>
+          )}
+        </div>
 
-              {errors.email && (
-                <p className="text-red-500 text-sm">{errors.email}</p>
-              )}
-            </div>
+        {/* Password */}
+        <div className="flex flex-col gap-2 w-full max-w-[472px]">
 
-            {/* Password */}
-            <div className="flex flex-col gap-2">
+          <div className="flex justify-between text-sm sm:text-[16px] font-semibold">
+            <label>Password</label>
 
-              <div className="flex justify-between w-[472px] font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
-                <label>Password</label>
-
-                <Link
-                  href="/forgot-password"
-                  className="text-[#0065A6] hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  placeholder="********"
-                  className="w-[472px] h-14 pl-12 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-
-                <button
-                  type="button"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-
-              {errors.password && (
-                <p className="text-red-500 text-sm">{errors.password}</p>
-              )}
-
-            </div>
-
-            {/* Sign In */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-[472px] h-[60px] bg-[#0065A6] text-white text-[20px] font-semibold flex items-center justify-center rounded-full hover:bg-blue-800"
+            <Link
+              href="/forgot-password"
+              className="text-[#0065A6] hover:underline"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </button>
+              Forgot password?
+            </Link>
+          </div>
 
-            {/* Google Login */}
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+
+            <input
+              type={showPassword ? "text" : "password"}
+              value={form.password}
+              onChange={(e) =>
+                setForm({ ...form, password: e.target.value })
+              }
+              placeholder="********"
+              className="w-full h-12 sm:h-14 pl-12 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+
             <button
               type="button"
-              className="w-[472px] h-14 border rounded-full flex items-center justify-center gap-2"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              onClick={() => setShowPassword(!showPassword)}
             >
-              <Image src={google} alt="google" width={24} height={24} />
-              Sign in with <span className="font-semibold">Google</span>
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
+          </div>
 
-            {/* Signup */}
-            <p className="text-center font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
-              Don’t have an account?{" "}
-              <Link href="/register" className="text-[#0065A6] underline">
-                Sign up
-              </Link>
-            </p>
-
-          </form>
+          {errors.password && (
+            <p className="text-red-500 text-sm">{errors.password}</p>
+          )}
 
         </div>
-      </div>
-    </section>
+
+        {/* Sign In */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full max-w-[472px] h-12 sm:h-[60px] bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold flex items-center justify-center rounded-full hover:bg-blue-800"
+        >
+          {isLoading ? "Signing in..." : "Sign in"}
+        </button>
+
+        {/* Google Login */}
+        <button
+          type="button"
+          className="w-full max-w-[472px] h-12 sm:h-14 border rounded-full flex items-center justify-center gap-2"
+        >
+          <Image src={google} alt="google" width={24} height={24} />
+          Sign in with <span className="font-semibold">Google</span>
+        </button>
+
+        {/* Signup */}
+        <p className="text-center text-sm sm:text-[16px] font-semibold">
+          Don’t have an account?{" "}
+          <Link href="/register" className="text-[#0065A6] underline">
+            Sign up
+          </Link>
+        </p>
+
+      </form>
+
+    </div>
+  </div>
+</section>
   );
 }
