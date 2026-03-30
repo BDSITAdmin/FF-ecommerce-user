@@ -7,7 +7,7 @@ import api from "../services/api";
 import { addToCartAsync } from "../store/cartSlice";
 import Navbar from "./Navbar";
 import Accordion from "./Accordion";
-import IxanBottle from "../public/assate/Front@2x 1.png";
+import IxanBottle from "@/assets/ixan-bottle.png";
 
 type Product = {
   id: string | number;
@@ -433,7 +433,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 <div className="bg-[#0065A6] rounded-full w-106.75 h-106.75 flex items-center justify-center">
                   <img
                     src={IxanBottle.src}
-                    alt="product"
+                    alt="product image"
                     className="h-100.25 w-91 object-contain mt-25"
                   />
                 </div>
