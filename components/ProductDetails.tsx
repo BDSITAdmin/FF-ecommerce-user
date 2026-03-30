@@ -41,6 +41,16 @@ const ingredients = [
     ],
   },
   {
+    heading: "Licorice Extract (25 mg)",
+    description:
+      "Licorice provides gentle systemic anti-inflammatory support.",
+    keyBenefits: [
+      "Reduce oxidative burden",
+      "Support healthy cellular response",
+      "Stabilize metabolic and ocular stress",
+    ],
+  },
+  {
     heading: "Lutein (10 mg)",
     description:
       "Lutein is concentrated in the macula, where it filters harmful visible light from screens and sunlight.",
@@ -49,36 +59,6 @@ const ingredients = [
       "Enhance macular pigment density",
       "Protect against digital-screen strain",
       "Reduce glare & improve night vision",
-    ],
-  },
-  {
-    heading: "Trans-Zeaxanthin (1 mg)",
-    description:
-      "Zeaxanthin works alongside lutein to support the central retina.",
-    keyBenefits: [
-      "Defend against oxidative retina damage",
-      "Improve contrast sensitivity",
-      "Protect visual performance during high screen exposure",
-    ],
-  },
-  {
-    heading: "Bilberry Extract (50 mg)",
-    description:
-      "Bilberry is rich in anthocyanins, known for enhancing blood vessel integrity in the eye.",
-    keyBenefits: [
-      "Improve retinal microcirculation",
-      "Reduce eye fatigue",
-      "Strengthen capillaries in Diabetic Retinopathy-prone eyes",
-    ],
-  },
-  {
-    heading: "Licorice Extract (25 mg)",
-    description:
-      "Licorice provides gentle systemic anti-inflammatory support.",
-    keyBenefits: [
-      "Reduce oxidative burden",
-      "Support healthy cellular response",
-      "Stabilize metabolic and ocular stress",
     ],
   },
   {
@@ -91,6 +71,18 @@ const ingredients = [
       "Strengthen immunity & cell repair mechanisms",
     ],
   },
+
+  {
+    heading: "Trans-Zeaxanthin (1 mg)",
+    description:
+      "Zeaxanthin works alongside lutein to support the central retina.",
+    keyBenefits: [
+      "Defend against oxidative retina damage",
+      "Improve contrast sensitivity",
+      "Protect visual performance during high screen exposure",
+    ],
+  },
+
   {
     heading: "Alpha Lipoic Acid (ALA) (25 mg)",
     description:
@@ -99,6 +91,16 @@ const ingredients = [
       "Improve insulin sensitivity",
       "Support nerve & retinal cell protection",
       "Boost antioxidant recycling (Vitamin C, E, Glutathione)",
+    ],
+  },
+  {
+    heading: "Bilberry Extract (50 mg)",
+    description:
+      "Bilberry is rich in anthocyanins, known for enhancing blood vessel integrity in the eye.",
+    keyBenefits: [
+      "Improve retinal microcirculation",
+      "Reduce eye fatigue",
+      "Strengthen capillaries in Diabetic Retinopathy-prone eyes",
     ],
   },
 ];
@@ -149,12 +151,26 @@ const testimonials = [
     message:
       "I work 10+ hours on a laptop and always had eye heaviness and dryness. After starting iXAN+, my eyes feel less strained, and the evening headaches have reduced a lot.",
   },
+   {
+    name: "Arun M.",
+    city: "Hyderabad",
+    title: "Sharper vision & better night driving.",
+    message:
+      "I noticed clearer vision and reduced glare while driving at night. The improvement in contrast sensitivity is real.",
+  },
   {
     name: "Sangeeta P.",
     city: "Pune",
     title: "Really helpful for early diabetic eye stress.",
     message:
       "I'm pre-diabetic and had mild retinal changes. My ophthalmologist recommended antioxidants. IXAN+ has made my vision more stable and reduced flickering.",
+  },
+   {
+    name: "Vani K.",
+    city: "Chennai",
+    title: "The only supplement that helped my dry, irritated eyes.",
+    message:
+      "Long screen hours made my eyes burn. IXAN+ brought noticeable relief and freshness. I feel less tired even after a full workday.",
   },
   {
     name: "Nikhil R.",
@@ -164,33 +180,22 @@ const testimonials = [
       "The patented matrix and clean-label formula made me try it. My focus, eye comfort, and overall energy feel better.",
   },
   {
-    name: "Prakash K.",
-    city: "Coimbatore",
-    title: "Perfect for my mother who has early diabetic retinopathy.",
-    message:
-      "She feels her vision is steadier, and her doctor said her retinal stress markers look better. Very happy.",
-  },
-  {
-    name: "Arun M.",
-    city: "Hyderabad",
-    title: "Sharper vision & better night driving.",
-    message:
-      "I noticed clearer vision and reduced glare while driving at night. The improvement in contrast sensitivity is real.",
-  },
-  {
-    name: "Vani K.",
-    city: "Chennai",
-    title: "The only supplement that helped my dry, irritated eyes.",
-    message:
-      "Long screen hours made my eyes burn. IXAN+ brought noticeable relief and freshness. I feel less tired even after a full workday.",
-  },
-  {
     name: "Pooja D.",
     city: "Gurgaon",
     title: "Great for people with high mobile/laptop use.",
     message:
       "My eyes used to feel heavy by evening. After a month on IXAN+, the discomfort has reduced significantly.",
   },
+  {
+    name: "Prakash K.",
+    city: "Coimbatore",
+    title: "Perfect for my mother who has early diabetic retinopathy.",
+    message:
+      "She feels her vision is steadier, and her doctor said her retinal stress markers look better. Very happy.",
+  },
+ 
+ 
+  
 ];
 
 const normalizeProductId = (value: ProductDetailsProps["productId"]) => {
@@ -268,152 +273,155 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     <div className="font-figtree">
       <Navbar />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 py-25">
-        <div className="">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 py-10 sm:py-14 lg:py-20 px-4 sm:px-8 lg:px-16">
+
+        {/* LEFT: IMAGE GALLERY */}
+        <div className="w-full">
+
+          {/* MAIN IMAGE */}
           <img
             src={galleryImages[selectedIndex] || "https://via.placeholder.com/400"}
             alt={product.name}
-            className="w-177.5 h-124.75"
+            className="w-full max-w-md mx-auto lg:max-w-full object-contain"
           />
 
+          {/* THUMBNAILS */}
           {galleryImages.length > 1 && (
             <div className="mt-4">
+
               <div className="flex items-center justify-center gap-3">
+
+                {/* PREV BUTTON */}
                 <button
-                  type="button"
                   onClick={handlePrevImage}
-                  className="h-9 w-9 flex items-center justify-center"
-                  aria-label="Previous image"
+                  className="h-8 w-8 flex items-center justify-center"
                 >
                   <img src="/assate/left arrow.svg" alt="Previous" className="h-4 w-4" />
                 </button>
 
-                <div className="flex flex-nowrap justify-center gap-3 max-w-[525px] px-1 overflow-hidden">
-                  {galleryImages.length > 0 &&
-                    (() => {
-                      const windowSize = Math.min(5, galleryImages.length);
-                      const start = Math.max(0, selectedIndex - Math.floor(windowSize / 2));
-                      const normalizedStart = Math.min(
-                        start,
-                        Math.max(0, galleryImages.length - windowSize)
-                      );
-                      const indices = Array.from({ length: windowSize }, (_, i) => normalizedStart + i);
-                      return indices.map((index) => {
-                        const img = galleryImages[index];
-                        return (
-                          <button
-                            key={`${img}-${index}`}
-                            type="button"
-                            onClick={() => setSelectedIndex(index)}
-                            ref={(el) => {
-                              thumbnailRefs.current[index] = el;
-                            }}
-                            className={`overflow-hidden rounded border-2 transition ${selectedIndex === index
-                                ? "border-green-600"
-                                : "border-transparent hover:border-green-300"
-                              }`}
-                          >
-                            <img
-                              src={img}
-                              alt={`${product.name} thumbnail ${index + 1}`}
-                              className="h-[121.85px] w-[95.28px] object-cover"
-                            />
-                          </button>
-                        );
-                      });
-                    })()}
+                {/* THUMBNAILS */}
+                <div className="flex gap-2 sm:gap-3 overflow-x-auto px-1">
+                  {galleryImages.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedIndex(index)}
+                      className={`rounded border-2 flex-shrink-0 ${selectedIndex === index
+                        ? "border-[#2477DC]"
+                        : "border-transparent"
+                        }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`thumb-${index}`}
+                        className="h-16 w-12 sm:h-20 sm:w-14 object-cover"
+                      />
+                    </button>
+                  ))}
                 </div>
 
+                {/* NEXT BUTTON */}
                 <button
-                  type="button"
                   onClick={handleNextImage}
-                  className="h-9 w-9 flex items-center justify-center"
-                  aria-label="Next image"
+                  className="h-8 w-8 flex items-center justify-center"
                 >
                   <img src="/assate/right arrow.svg" alt="Next" className="h-4 w-4" />
                 </button>
+
               </div>
 
-              <div className="mt-3 flex items-center justify-center gap-2">
+              {/* DOTS */}
+              <div className="mt-3 flex justify-center gap-2">
                 {galleryImages.map((_, index) => (
                   <button
-                    key={`dot-${index}`}
-                    type="button"
+                    key={index}
                     onClick={() => setSelectedIndex(index)}
-                    className={`h-1.5 w-1.5 rounded-full transition ${selectedIndex === index ? "bg-[#2477DC]" : "bg-gray-300 hover:bg-gray-400"
+                    className={`h-1.5 w-1.5 rounded-full ${selectedIndex === index
+                      ? "bg-[#2477DC]"
+                      : "bg-gray-300"
                       }`}
-                    aria-label={`Go to image ${index + 1}`}
                   />
                 ))}
               </div>
+
             </div>
           )}
         </div>
 
-        <div className="px-10">
-          <div className="">
-            <h1 className="text-[64px] tracking-wide font-extrabold">{product.name}</h1>
-            <h3 className="text-[18px]  font-extrabold mb-4">Powerful | Proven | Patented ixan+</h3>
+        {/* RIGHT: PRODUCT DETAILS */}
+        <div className=" mt-6 sm:mt-12 sm:px-0 lg:px-8 ">
 
-            <p className="text-gray-600 mb-10">
-              {product.description || "No description available"}
-            </p>
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
+            {product.name}
+          </h1>
 
-            <p className=" text-[36px] font-semibold ">Rs. {product.price}/-</p>
-            <p className="text-gray-600 mb-26">
-              Pack Size: 60 Veg Capsules (2-Month Pack)
-            </p>
+          <h3 className="text-sm sm:text-2xl font-bold mt-2 mb-4">
+            Powerful | Proven | Patented ixan+
+          </h3>
 
-            <div className="flex items-center gap-4 ">
-              <div className="inline-flex w-36.75 h-13 items-center rounded-md border border-[#C5C5C5]">
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
-                  className="h-10 w-10 text-lg font-semibold text-gray-700 hover:bg-gray-100"
-                  aria-label="Decrease quantity"
-                >
-                  -
-                </button>
-                <span className="w-12 text-center text-base font-semibold text-gray-900">
-                  {quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                  className="h-10 w-10 text-lg font-semibold text-gray-700 hover:bg-gray-100"
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-              </div>
+          <p className="text-gray-600 text-sm sm:text-base mb-6">
+            {product.description || "No description available"}
+          </p>
+
+          <p className="text-2xl sm:text-3xl font-semibold">
+            Rs. {product.price}/-
+          </p>
+
+          <p className="text-gray-600 text-sm mb-6">
+            Pack Size: 60 Veg Capsules (2-Month Pack)
+          </p>
+
+          {/* QUANTITY + BUTTON */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+
+            {/* QUANTITY */}
+            <div className="inline-flex items-center border border-[#C5C5C5] rounded-md">
+              <button
+                onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
+                className="h-10 w-10 text-lg hover:bg-gray-100"
+              >
+                -
+              </button>
+
+              <span className="w-10 text-center font-semibold">
+                {quantity}
+              </span>
 
               <button
-                type="button"
-                onClick={handleAddToCart}
-                className="rounded-full bg-[#0065A6] w-78.25 px-9 py-4 font-medium text-white "
+                onClick={() => setQuantity((prev) => prev + 1)}
+                className="h-10 w-10 text-lg hover:bg-gray-100"
               >
-                Add to Cart
+                +
               </button>
             </div>
+
+            {/* ADD TO CART */}
+            <button
+              onClick={handleAddToCart}
+              className="w-full sm:w-auto px-16 py-3 rounded-full bg-[#0065A6] text-white font-medium hover:opacity-90 transition"
+            >
+              Add to Cart
+            </button>
+
           </div>
-          <div className="cart section"></div>
+
         </div>
       </div>
 
       <div className="bg-white p-10 flex justify-center">
-        <div className="bg-[#0e6ea8] pl-14 py-14 pr-10 rounded-2xl  ">
+        <div className="bg-[#0e6ea8] pl-8 py-8 Sm:pl-14 sm:py-14 pr-10 rounded-2xl  ">
           <div className="max-w-304 space-y-10">
-            <div className="bg-[#FFFFFF] rounded-xl px-16 py-20 grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+
+              {/* TEXT SECTION */}
               <div>
-                <h2 className="font-bold leading-[-1%]  text-[28px] mb-3 object-contain">
+                <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] mb-3 leading-tight">
                   What is {product.name}?
                 </h2>
-                <p className="text-md font-normal text-[#181818] leading-5.5">
+
+                <p className="text-sm sm:text-base text-[#181818] leading-relaxed">
                   ixan+ is a patented, clinically validated antioxidant and anti-inflammatory formulation created to safeguard eyes from the constant stress of modern living.
-                  <br />
-                  <br />
+                  <br /><br />
                   Daily exposure to digital screens, pollution, irregular meals, and chronic stress accelerates oxidative damage impacting the eyes first, as they are among the most sensitive organs in the body.
-                  <br />
                   ixan+ brings together a powerful blend of Curcuminoids, Lutein, Zeaxanthin, Bilberry, Licorice, Alpha Lipoic Acid, and Zinc to form a synergistic matrix that works at multiple levels:
                   <br />
                   Supports ocular protection and strengthens retinal cells
@@ -421,311 +429,346 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   Helps maintain visual performance under digital and environmental strain
                   <br />
                   Promotes metabolic balance, relevant for individuals at risk of or experiencing diabetic eye changes
-                  <br />
-                  <br />
+                  <br /><br />
                   Formulated for modern lifestyles, ixan+ helps protect vision, naturally and effectively.
                 </p>
               </div>
 
+              {/* IMAGE SECTION */}
               <div className="flex justify-center">
-                <div className="bg-[#0065A6] rounded-full w-106.75 h-106.75 flex items-center justify-center">
+                <div className="bg-[#0065A6] rounded-full 
+        w-52 h-52 
+        sm:w-64 sm:h-64 
+        md:w-80 md:h-80 
+        lg:w-[420px] lg:h-[420px] 
+        flex items-center justify-center">
+
                   <img
                     src={IxanBottle.src}
                     alt="product image"
-                    className="h-100.25 w-91 object-contain mt-25"
+                    className="object-contain 
+          w-40 sm:w-48 md:w-60 lg:w-[360px] 
+          mt-6 sm:mt-10 lg:mt-16"
                   />
                 </div>
               </div>
+
             </div>
 
-            <div className="bg-[#FFFFFF] rounded-xl px-16 py-20 grid grid-cols-1  gap-6 items-center">
-              <h2 className="font-bold leading-9 tracking-[-1%]   text-[28px] mb-3">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-20 grid grid-cols-1 gap-8">
+
+              {/* HEADING */}
+              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug tracking-tight">
                 What Makes {product.name} Different?
               </h2>
 
-              <div className="grid grid-cols-3 gap-6 text-sm">
+              {/* GRID ITEMS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                {/* ITEM 1 */}
                 <div>
-                  <img src="/icons/protect-icon.svg" alt="Protect" className="mb-2 h-12 w-12" />
-                  <h3 className="font-bold text-[16px] leading-6 mb-1">
+                  <img src="/icons/protect-icon.svg" alt="Protect" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     1. Synergistic Antioxidant & Anti-inflammatory Matrix (Patented)
                   </h3>
-                  <p className="text-[#181818] leading-6 text-[16px] ">
+                  <p className="text-[#181818] text-sm sm:text-base leading-relaxed">
                     Curcuminoids + Lutein + Zeaxanthin work together to neutralize oxidative damage and support retinal pigment density.
                   </p>
                 </div>
 
+                {/* ITEM 2 */}
                 <div>
-                  <img src="/icons/eye-icon.svg" alt="Eye" className="mb-2 h-12 w-12" />
-                  <h3 className="font-bold text-[16px] leading-6 mb-1">
+                  <img src="/icons/eye-icon.svg" alt="Eye" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     2. Retina-Targeted Protection
                   </h3>
-                  <p className="text-[#181818] leading-6 text-[16px]">
+                  <p className="text-[#181818] text-sm sm:text-base leading-relaxed">
                     Ingredients like Bilberry, ALA, and Zinc provide micro-vascular support essential for retinal health especially in conditions like Diabetic Retinopathy.
                   </p>
                 </div>
 
+                {/* ITEM 3 */}
                 <div>
-                  <img src="/icons/nuclie-icon.svg" alt="Nuclie" className="mb-2 h-12 w-12" />
-                  <h3 className="font-bold text-[16px] leading-6 mb-1">
+                  <img src="/icons/nuclie-icon.svg" alt="Nuclie" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     3. Cellular + Organ Wellness
                   </h3>
-                  <p className="text-[#181818] leading-6 text-[16px]">
-                    ixan+ isn't just an eye supplement-it protects cells, tissues, and metabolic pathways impacted by oxidative stress.
+                  <p className="text-[#181818] text-sm sm:text-base leading-relaxed">
+                    ixan+ isn't just an eye supplement—it protects cells, tissues, and metabolic pathways impacted by oxidative stress.
                   </p>
                 </div>
+
+                {/* ITEM 4 */}
                 <div>
-                  <img src="/icons/research-icon.svg" alt="Research" className="mb-2 h-12 w-12" />
-                  <h3 className="font-bold text-[16px] leading-6 mb-1">
+                  <img src="/icons/research-icon.svg" alt="Research" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     4. Clinically Referenced Formulation
                   </h3>
-                  <p className="text-[#181818] leading-6 text-[16px]">
+                  <p className="text-[#181818] text-sm sm:text-base leading-relaxed">
                     Backed by CTRI: CTRI/2023/07/055671, ensuring scientific validation and safety.
                   </p>
                 </div>
 
+                {/* ITEM 5 */}
                 <div>
-                  <img src="/icons/approve-icon.svg" alt="Approve" className="mb-2 h-12 w-12" />
-                  <h3 className="font-bold text-[16px] leading-6 mb-1">
+                  <img src="/icons/approve-icon.svg" alt="Approve" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     5. Clean Label & Daily-Use Friendly
                   </h3>
-                  <p className="text-[#181818] leading-6 text-[16px]">
-                    100% vegetarian l No artificial colors l No preservatives l No fillers
+                  <p className="text-[#181818] text-sm sm:text-base leading-relaxed">
+                    100% vegetarian | No artificial colors | No preservatives | No fillers
                   </p>
                 </div>
+
               </div>
             </div>
 
-            <div className="bg-[#FFFFFF] rounded-xl p-16">
-              <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16">
+
+              {/* HEADING */}
+              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                 Know the Ingredients (Inside ixan+)
               </h2>
-              <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                Discover the science-powered natural actives that make ixan+ a patented, proven, and powerful vision + retinal + metabolic wellness formula.
+
+              {/* DESCRIPTION */}
+              <p className="text-sm sm:text-base leading-relaxed mb-6">
+                Discover the science-powered natural actives that make ixan+ a patented, proven, and powerful vision + retinal + metabolic wellness formula.<br />
                 Patented iXAN: An Anti-Inflammatory & Antioxidant Matrix of Curcuminoids & Xanthophylls:
               </p>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                {ingredients.map((item, index) => (
-                  <div key={index} className="mb-4">
-                    <h4 className="font-bold text-[20px] leading-6 tracking-normal">{item.heading}</h4>
+              {/* INGREDIENT GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
 
-                    <p className="font-normal text-[16px] leading-6 tracking-normal">
+                {ingredients.map((item, index) => (
+                  <div key={index} className="space-y-2">
+
+                    {/* HEADING */}
+                    <h4 className="font-bold text-base sm:text-lg lg:text-[20px] leading-6">
+                      {item.heading}
+                    </h4>
+
+                    {/* DESCRIPTION */}
+                    <p className="text-sm sm:text-base leading-relaxed">
                       {item.description}
                     </p>
 
-                    <h5 className="font-bold text-[16px] leading-6 tracking-normal">
+                    {/* SUB TITLE */}
+                    <h5 className="font-semibold text-sm sm:text-base mt-2">
                       It helps:
                     </h5>
 
-                    <p className="font-normal text-[16px] leading-6 tracking-normal">
+                    {/* BENEFITS LIST */}
+                    <ul className="text-sm sm:text-base leading-relaxed list-disc pl-5">
                       {item.keyBenefits.map((benefit, i) => (
-                        <span key={i}>
-                          {benefit}
-                          <br />
-                        </span>
+                        <li key={i}>{benefit}</li>
                       ))}
-                    </p>
+                    </ul>
+
                   </div>
                 ))}
+
               </div>
             </div>
 
-            <div className="bg-[#FFFFFF] rounded-xl p-16 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className=" grid grid-cols-1 gap-4">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16 grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+              {/* LEFT CONTENT */}
+              <div className="space-y-8">
+
+                {/* SECTION 1 */}
                 <div>
-                  <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+                  <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                     Why This Combination Works
                   </h2>
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
+
+                  <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base leading-relaxed mb-4">
                     Each ingredient is powerful alone, but in ixan+ they form a synergistic antioxidant & anti-inflammatory matrix that protects:
                   </p>
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                    Vision clarity
-                    <br />
-                    Retinal microvascular health
-                    <br />
-                    Macular pigment density
-                    <br />
-                    Cellular and metabolic balance
-                    <br />
-                    Eyes at risk of diabetic complications
-                  </p>
+
+                  <ul className="list-disc pl-5 font-figtree font-normal text-base leading-6 tracking-normal sm:text-base leading-relaxed space-y-1">
+                    <li>Vision clarity</li>
+                    <li>Retinal microvascular health</li>
+                    <li>Macular pigment density</li>
+                    <li>Cellular and metabolic balance</li>
+                    <li>Eyes at risk of diabetic complications</li>
+                  </ul>
                 </div>
+
+                {/* SECTION 2 */}
                 <div>
-                  <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+                  <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                     Who Should Use ixan+?
                   </h2>
 
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                    Individuals with high screen time
-                    <br />
-                    Those experiencing eye strain, dryness, or irritation
-                    <br />
-                    Adults wanting macular & retinal protection
-                    <br />
-                    Individuals with early signs of retinal stress
-                    <br />
-                    People living with or at risk of Diabetic Retinopathy
-                    <br />
-                    Anyone seeking a daily antioxidant + eye health supplement
-                  </p>
+                  <ul className="list-disc pl-5 font-figtree font-normal text-base leading-6 tracking-normal sm:text-base space-y-1">
+                    <li>Individuals with high screen time</li>
+                    <li>Those experiencing eye strain, dryness, or irritation</li>
+                    <li>Adults wanting macular & retinal protection</li>
+                    <li>Individuals with early signs of retinal stress</li>
+                    <li>People living with or at risk of Diabetic Retinopathy</li>
+                    <li>Anyone seeking a daily antioxidant + eye health supplement</li>
+                  </ul>
                 </div>
+
+                {/* SECTION 3 */}
                 <div>
-                  <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+                  <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                     How to Use
                   </h2>
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                    1 capsule once a day as maintenance dose,
-                    <br />
+
+                  <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base mb-4">
+                    1 capsule once a day as maintenance dose,<br />
                     2 capsules a day for advanced support or as advised by the physician.
                   </p>
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                    ixan+ is developed by Farm Fresh Bioworks (India) Pvt. Ltd., a science-led nutraceutical innovator.
-                    From sustainable farming to bioactive extraction and clinical validation, we ensure transparency, quality,
-                    and measurable efficacy.
+
+                  <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base  mb-4">
+                    ixan+ is developed by Farm Fresh Bioworks (India) Pvt. Ltd., a science-led nutraceutical innovator.  From sustainable farming to bioactive extraction and clinical validation, we ensure transparency, quality, and measurable efficacy.
                   </p>
-                  <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                    Science-Driven. Nature-Powered.
-                    <br />
-                    Start the/your journey toward healthier eyes, resilient cells and long-term metabolic wellness with iXAN+.
+
+                  <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base ">
+                    Science-Driven. Nature-Powered.<br />
+                    Start your journey toward healthier eyes, resilient cells and long-term metabolic wellness with iXAN+.
                   </p>
                 </div>
+
               </div>
 
+              {/* RIGHT CONTENT (TABLES) */}
               <div>
-                <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+
+                <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                   Supplement Facts (Per Veg Capsule)
                 </h2>
-                <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                  Supplement Facts
+
+                <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base mb-2">
+                  Supplement Facts <br />
+                  Serving Size: 1 Veg Capsule | Servings Per Container: 60
                 </p>
-                <p className="font-normal text-[16px] leading-6 tracking-normal mb-4">
-                  Serving Size: 1 Veg Capsule l Servings Per Container: 60
-                </p>
 
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="py-3">Ingredients</th>
-                      <th className="py-3">Amount per Capsule</th>
-                    </tr>
-                  </thead>
+                {/* TABLE WRAPPER (SCROLL ON MOBILE) */}
+                <div className="overflow-x-auto">
 
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="py-3">Curcuminoids</td>
-                      <td className="py-3">60mg †</td>
-                    </tr>
+                  <table className="w-3/4 text-left text-sm sm:text-base ">
+                    <thead>
+                      <tr>
+                        <th className="py-3 px-3">Ingredients</th>
+                        <th className="py-3 px-3">Amount per Capsule</th>
+                      </tr>
+                    </thead>
 
-                    <tr className="border-b">
-                      <td className="py-3">Lutein</td>
-                      <td className="py-3">10 mg †</td>
-                    </tr>
+                    <tbody>
+                      {[
+                        ["Curcuminoids", "60 mg"],
+                        ["Lutein", "10 mg"],
+                        ["Trans Zeaxanthin", "1 mg"],
+                        ["Bilberry Extract", "50 mg"],
+                        ["Licorice Extract", "25 mg"],
+                        ["Alpha Lipoic Acid", "25 mg"],
+                        ["Zinc (as Zinc gluconate)", "10 mg"],
+                      ].map((row, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="py-2 px-3">{row[0]}</td>
+                          <td className="py-2 px-3">{row[1]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                    <tr className="border-b">
-                      <td className="py-3">Trans Zeaxanthin</td>
-                      <td className="py-3">1 mg †</td>
-                    </tr>
+                </div>
 
-                    <tr className="border-b">
-                      <td className="py-3">Bilberry Extract</td>
-                      <td className="py-3">50 mg</td>
-                    </tr>
-
-                    <tr className="border-b">
-                      <td className="py-3">Licorice Extract</td>
-                      <td className="py-3">25 mg</td>
-                    </tr>
-
-                    <tr className="border-b">
-                      <td className="py-3">Alpha Lipoic Acid</td>
-                      <td className="py-3">25 mg</td>
-                    </tr>
-
-                    <tr className="border-b">
-                      <td className="py-3">Zinc (as Zinc gluconate)</td>
-                      <td className="py-3">10 mg</td>
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="font-normal text-[16px] leading-6 tracking-normal mt-4">
+                <p className=" mt-2 sm:mt-12 font-figtree font-normal text-base leading-6 tracking-normal">
                   † iXAN® is a Patented Matrix. Clinical Reference: CTRI/2023/07/055671
                 </p>
 
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-300">
-                      <th className="py-3 font-semibold">Nutrient</th>
-                      <th className="py-3 font-semibold">Amount per Capsule</th>
-                    </tr>
-                  </thead>
+                {/* SECOND TABLE */}
+                <div className="overflow-x-auto mt-6">
 
-                  <tbody>
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Energy</td>
-                      <td className="py-3">2 kcal</td>
-                    </tr>
+                  <table className="w-96 text-left text-sm sm:text-base ">
+                    <thead>
+                      <tr>
+                        <th className="py-3 px-3">Nutrient</th>
+                        <th className="py-3 px-3">Amount per Capsule</th>
+                      </tr>
+                    </thead>
 
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Protein</td>
-                      <td className="py-3">&lt;0.01 g</td>
-                    </tr>
+                    <tbody>
+                      {[
+                        ["Energy", "2 kcal"],
+                        ["Protein", "<0.01 g"],
+                        ["Carbohydrate", "<0.2 g"],
+                        ["Sugar", "<0.05 g"],
+                        ["Fat", "<0.05 g"],
+                        ["Sodium", "<50 mg"],
+                      ].map((row, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="py-2 px-3">{row[0]}</td>
+                          <td className="py-2 px-3">{row[1]}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Carbohydrate</td>
-                      <td className="py-3">&lt;0.2 g</td>
-                    </tr>
+                </div>
 
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Sugar</td>
-                      <td className="py-3">&lt;0.05 g</td>
-                    </tr>
-
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Fat</td>
-                      <td className="py-3">&lt;0.05 g</td>
-                    </tr>
-
-                    <tr className="border-b border-gray-200">
-                      <td className="py-3">Sodium</td>
-                      <td className="py-3">&lt;50 mg</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <p className="font-normal text-[16px] leading-6 tracking-normal mt-4">
+                <p className="text-sm mt-3">
                   ** RDA not established, *RDA as per ICMR 2020
                 </p>
+
               </div>
+
             </div>
 
-            <div className="bg-[#FFFFFF] rounded-xl p-16">
-              <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">FAQs</h2>
-              <div className=" grid grid-cols-2 gap-14">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16">
+
+              {/* HEADING */}
+              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-6">
+                FAQs
+              </h2>
+
+              {/* ACCORDION GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
                 <Accordion items={faqs} />
                 <Accordion items={faqs} />
               </div>
+
             </div>
 
-            <div className=" rounded-xl mb-6">
-              <h2 className="font-bold leading-[-1%]  text-[28px] text-[#FFFFFF] mb-6">
+            <div className="rounded-xl mb-10 px-0 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16">
+
+              {/* HEADING */}
+              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] text-white mb-6 leading-snug">
                 Client Testimonials
               </h2>
-              <div className=" grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* TESTIMONIAL GRID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+
                 {testimonials.map((testimonial, index) => (
-                  <div key={index} className="bg-[#023954] text-[#FFFFFF] rounded-xl px-9 py-12">
-                    <p className="font-normal text-[20px] leading-7 tracking-normal mb-1">
+                  <div
+                    key={index}
+                    className="bg-[#023954] text-white rounded-xl px-5 sm:px-6 lg:px-9 py-6 sm:py-8 lg:py-12 shadow-sm hover:shadow-lg transition duration-300"
+                  >
+
+                    {/* TITLE */}
+                    <p className="text-base sm:text-lg lg:text-[20px] leading-relaxed mb-1">
                       {testimonial.title}
                     </p>
-                    <p className="font-normal text-[20px] leading-7 tracking-normal mb-4">
+
+                    {/* MESSAGE */}
+                    <p className="text-base sm:text-lg lg:text-[20px] leading-relaxed mb-4">
                       {testimonial.message}
                     </p>
-                    <p className="font-normal text-[20px] leading-7 tracking-normal">
-                      - {testimonial.name}, {testimonial.city}
+
+                    {/* NAME */}
+                    <p className="text-sm sm:text-base lg:text-[18px] opacity-90">
+                      — {testimonial.name}, {testimonial.city}
                     </p>
+
                   </div>
                 ))}
+
               </div>
+
             </div>
           </div>
         </div>
