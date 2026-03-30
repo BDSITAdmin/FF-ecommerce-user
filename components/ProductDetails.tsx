@@ -7,7 +7,7 @@ import api from "../services/api";
 import { addToCartAsync } from "../store/cartSlice";
 import Navbar from "./Navbar";
 import Accordion from "./Accordion";
-import IxanBottle from "../public/assate/Front@2x 1.png";
+import IxanBottle from "@/public/assate/IxanBottle.png";
 
 type Product = {
   id: string | number;
@@ -308,11 +308,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                             ref={(el) => {
                               thumbnailRefs.current[index] = el;
                             }}
-                            className={`overflow-hidden rounded border-2 transition ${
-                              selectedIndex === index
+                            className={`overflow-hidden rounded border-2 transition ${selectedIndex === index
                                 ? "border-green-600"
                                 : "border-transparent hover:border-green-300"
-                            }`}
+                              }`}
                           >
                             <img
                               src={img}
@@ -341,9 +340,8 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                     key={`dot-${index}`}
                     type="button"
                     onClick={() => setSelectedIndex(index)}
-                    className={`h-1.5 w-1.5 rounded-full transition ${
-                      selectedIndex === index ? "bg-[#2477DC]" : "bg-gray-300 hover:bg-gray-400"
-                    }`}
+                    className={`h-1.5 w-1.5 rounded-full transition ${selectedIndex === index ? "bg-[#2477DC]" : "bg-gray-300 hover:bg-gray-400"
+                      }`}
                     aria-label={`Go to image ${index + 1}`}
                   />
                 ))}
@@ -407,7 +405,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           <div className="max-w-304 space-y-10">
             <div className="bg-[#FFFFFF] rounded-xl px-16 py-20 grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
               <div>
-                <h2 className="font-bold leading-[-1%]  text-[28px] mb-3">
+                <h2 className="font-bold leading-[-1%]  text-[28px] mb-3 object-contain">
                   What is {product.name}?
                 </h2>
                 <p className="text-md font-normal text-[#181818] leading-5.5">
