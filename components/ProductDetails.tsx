@@ -407,7 +407,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
         </div>
       </div>
 
-      <div className="bg-white p-0.5 lg:p-10 sm:p-10 flex justify-center">
+      <div className="bg-white p-0 lg:p-10 sm:p-10 flex justify-center">
         <div className="bg-[#0e6ea8] pl-8 py-8 Sm:pl-14 sm:py-14 pr-10 rounded-2xl  ">
           <div className="max-w-304 space-y-10">
             <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
