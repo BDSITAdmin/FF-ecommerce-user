@@ -151,7 +151,7 @@ const testimonials = [
     message:
       "I work 10+ hours on a laptop and always had eye heaviness and dryness. After starting iXAN+, my eyes feel less strained, and the evening headaches have reduced a lot.",
   },
-   {
+  {
     name: "Arun M.",
     city: "Hyderabad",
     title: "Sharper vision & better night driving.",
@@ -165,7 +165,7 @@ const testimonials = [
     message:
       "I'm pre-diabetic and had mild retinal changes. My ophthalmologist recommended antioxidants. IXAN+ has made my vision more stable and reduced flickering.",
   },
-   {
+  {
     name: "Vani K.",
     city: "Chennai",
     title: "The only supplement that helped my dry, irritated eyes.",
@@ -193,9 +193,9 @@ const testimonials = [
     message:
       "She feels her vision is steadier, and her doctor said her retinal stress markers look better. Very happy.",
   },
- 
- 
-  
+
+
+
 ];
 
 const normalizeProductId = (value: ProductDetailsProps["productId"]) => {
