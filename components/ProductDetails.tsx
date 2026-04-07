@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import api from "../services/api";
@@ -8,6 +9,10 @@ import { addToCartAsync } from "../store/cartSlice";
 import Navbar from "./Navbar";
 import Accordion from "./Accordion";
 import IxanBottle from "@/public/assate/IxanBottle.png";
+import IxanLogo from "@/public/assate/ixan-logo.svg";
+
+
+
 
 type Product = {
   id: string | number;
@@ -107,41 +112,94 @@ const ingredients = [
 
 const faqs = [
   {
+    question: "Does ixan+ help with age-related vision problems?",
+    answer:
+      "Yes. ixan’s antioxidant matrix supports macular pigment density, helping protect against cataracts, age-related macular degeneration (AMD), and retina damage.",
+  },
+  {
     question: "Can ixan+ be taken along with diabetes medication?",
     answer:
-      "Yes. Ixan's antioxidant matrix supports macular pigment density, helping protect against cataracts, age-related macular degeneration (AMD), and retina damage.",
+      "Yes, it is generally safe. However, consult your doctor for personalized guidance.",
   },
   {
     question: "Is ixan+ helpful for people with long-term computer or mobile usage?",
     answer:
-      "Yes, it helps reduce digital eye strain and protects the retina from blue light exposure.",
+      "Absolutely. It reduces digital eye strain, dryness, heaviness, and glare sensitivity, making screen time more comfortable.",
   },
   {
     question: "Will ixan+ improve my night vision?",
     answer:
-      "It supports retinal health and macular pigment which may improve visual clarity and night vision.",
+      "Yes. Lutein & Zeaxanthin helps improve contrast sensitivity & low-light visibility, counter Glare disability & improve photo stress recovery.",
   },
   {
-    question: "Can I take ixan+ if I don't have eye problems?",
+    question: "Can I take ixan+ if I don’t have eye problems?",
     answer:
-      "Yes, it can be used as a preventive supplement to maintain healthy vision.",
+      "Yes. It’s designed for preventive eye health, protecting retina and cells from daily oxidative stress.",
   },
   {
-    question: "Is IXAN+ safe for people with high blood pressure or cholesterol?",
+    question: "Is ixan+ safe for people with high blood pressure or cholesterol?",
     answer:
-      "Yes, but it is always recommended to consult your doctor before starting any supplement.",
+      "Yes. Since it supports microvascular health, it is beneficial - but always consult your doctor if you are on any medications.",
   },
   {
-    question: "How is IXAN+ different from normal Lutein-Zeaxanthin supplements?",
+    question: "How is ixan+ different from normal Lutein-Zeaxanthin supplements?",
     answer:
-      "IXAN+ includes a broader antioxidant matrix including curcuminoids, bilberry extract, and alpha lipoic acid.",
+      "ixan+ combines patented Curcuminoids + Xanthophylls + Bilberry + ALA + Zinc for triple-layer retinal and metabolic support, not just basic macular care.",
   },
   {
-    question: "Is IXAN+ suitable for people working night shifts?",
+    question: "Does ixan+ reduce light sensitivity and glare while driving?",
     answer:
-      "Yes, it helps reduce screen strain and supports retinal protection for people exposed to long hours of artificial light.",
+      "Yes. Users often report better contrast clarity and reduced glare, especially during night driving.",
   },
+  {
+    question: "Is ixan+ suitable for people working night shifts?",
+    answer:
+      "Yes. It helps counter screen exposure, circadian stress, and retinal strain commonly faced during night-shift routines.",
+  },
+  {
+    question: "Does ixan+ help with dry or irritated eyes?",
+    answer:
+      "Ixan+ helps reduce inflammation and oxidative load, which indirectly supports better eye comfort.",
+  },
+  {
+    question: " Can ixan+ support retina health in people with a family history of diabetes?",
+    answer:
+      "Yes. Ixan+ offers proactive protection for individuals who may be at genetic risk of diabetic eye complications.",
+  },
+  {
+    question: "Can athletes or active individuals take ixan+?",
+    answer:
+      "Yes. Ixan+ supports cellular recovery, oxidative balance, and visual performance, which benefit active lifestyles.",
+  },
+  {
+    question: "How long should I take Ixan+ continuously?",
+    answer:
+      "For long-term protection, at least 3–6 months of continuous use is recommended.",
+  },
+  {
+    question: "Can I take Ixan+ with my multivitamin?",
+    answer:
+      "Yes. Ixan+ complements most multivitamins. No major ingredient overlaps.",
+  },
+  {
+    question: "Is Ixan+ safe for seniors above 60?",
+    answer:
+      "Yes. In fact, seniors benefit more with ixan+ considering increased chances of ocular oxidative stress and retinal thinning in aged groups.",
+  },
+  {
+    question: " Is Ixan+ habit-forming?",
+    answer:
+      "No. Ixan+ is a nutraceutical supplement, safe for daily long-term use without dependency.",
+  },
+  {
+    question: "Why does Diabetic Retinopathy need antioxidant protection?",
+    answer:
+      "High or fluctuating blood sugar creates continuous oxidative stress, which damages the tiny blood vessels in the retina. This leads to blurred vision, macular swelling, light sensitivity, and faster retinal degeneration. Antioxidants help neutralize oxidative damage, protect retinal micro-vessels, and maintain macular pigment levels, slowing the progression of Diabetic Retinopathy. ixan+ provides daily supportive antioxidant protection for those at risk.",
+  }
 ];
+
+const leftFaqs = faqs.filter((_, i) => i % 2 === 0);
+const rightFaqs = faqs.filter((_, i) => i % 2 !== 0);
 
 const testimonials = [
   {
@@ -270,10 +328,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   if (!product) return <div className="p-10">Loading...</div>;
 
   return (
-    <div className="font-figtree">
+    <div className="font-figtree ">
       <Navbar />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 py-10 sm:py-14 lg:py-20 px-4 sm:px-8 lg:px-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12  sm:py-14 lg:py-20 ">
 
         {/* LEFT: IMAGE GALLERY */}
         <div className="w-full">
@@ -313,7 +371,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                       <img
                         src={img}
                         alt={`thumb-${index}`}
-                        className="h-16 w-12 sm:h-20 sm:w-14 object-cover"
+                        className="h-16 w-12 sm:h-[121.85px] sm:w-[95.28px] object-cover"
                       />
                     </button>
                   ))}
@@ -348,33 +406,45 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
         </div>
 
         {/* RIGHT: PRODUCT DETAILS */}
-        <div className=" mt-6 sm:mt-12 sm:px-0 lg:px-8 ">
+        <div className=" mt-4 pb-4 sm:mt-12 px-4 sm:px-0 lg:px-8 ">
 
-          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
+          {/* <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
             {product.name}
-          </h1>
+          </h1> */}
+          <img
+            src={IxanLogo.src}
+            alt="Ixan Logo"
+            className="w-[140px] sm:w-[180px] md:w-[220px] lg:w-[231px] h-auto mb-2"
+          />
 
           <h3 className="text-sm sm:text-2xl font-bold mt-2 mb-4">
-            Powerful | Proven | Patented ixan+
+            Powerful | Proven | Patented <Image
+              src={IxanLogo}
+              alt="Verified"
+              width={70}
+              height={70}
+              className="inline-block pb-2 object-contain"
+            />
           </h3>
 
-          <p className="text-gray-600 text-sm sm:text-base mb-6">
+          <p className="text-[#181818] text-sm sm:text-xl font-normal mb-6">
             {product.description || "No description available"}
           </p>
+          <div className=" sm:mt-14 mb-4">
+            <p className="text-2xl  font-figtree font-semibold sm:text-[36px] leading-[36px] tracking-normal">
+              Rs. {product.price}/-
+            </p>
 
-          <p className="text-2xl sm:text-3xl font-semibold">
-            Rs. {product.price}/-
-          </p>
-
-          <p className="text-gray-600 text-sm mb-6">
-            Pack Size: 60 Veg Capsules (2-Month Pack)
-          </p>
+            <p className="text-[#181818] text-sm sm:text-xl font-normal mt-3 ">
+              Pack Size: 60 Veg Capsules (2-Month Pack)
+            </p>
+          </div>
 
           {/* QUANTITY + BUTTON */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:mt-16 ">
 
             {/* QUANTITY */}
-            <div className="inline-flex items-center border border-[#C5C5C5] rounded-md">
+            <div className="inline-flex items-center border border-[#C5C5C5] sm:px-5 sm:py-2 ">
               <button
                 onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
                 className="h-10 w-10 text-lg hover:bg-gray-100"
@@ -397,7 +467,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             {/* ADD TO CART */}
             <button
               onClick={handleAddToCart}
-              className="w-full sm:w-auto px-16 py-3 rounded-full bg-[#0065A6] text-white font-medium hover:opacity-90 transition"
+              className="w-full sm:w-auto px-5 py-4 sm:px-24 sm:py-5  font-semibold sm:text-[20px] leading-[20px] tracking-normal rounded-full bg-[#0065A6] text-white font-medium hover:opacity-90 transition"
             >
               Add to Cart
             </button>
@@ -408,14 +478,22 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
       </div>
 
       <div className="bg-white p-0 lg:p-10 sm:p-10 flex justify-center">
-        <div className="bg-[#0e6ea8] pl-8 py-8 Sm:pl-14 sm:py-14 pr-10 rounded-0 lg:rounded-2xl sm:rounded-2xl  ">
+        <div className="bg-[#0e6ea8] px-8 py-8 Sm:px-14 sm:py-14  rounded-0 lg:rounded-2xl sm:rounded-2xl  ">
           <div className="max-w-304 space-y-10">
-            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-10 py-10 sm:py-10 lg:py-14 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
 
               {/* TEXT SECTION */}
               <div>
-                <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] mb-3 leading-tight">
-                  What is {product.name}?
+                <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] mb-3 leading-tight flex items-center gap-2">
+                  What is
+                  <Image
+                    src={IxanLogo}
+                    alt="logo"
+                    width={80}
+                    height={30}
+                    className="h-6 sm:h-4 md:h-5 w-auto object-contain"
+                  />
+                  ?
                 </h2>
 
                 <p className="text-sm sm:text-base text-[#181818] leading-relaxed">
@@ -424,42 +502,31 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   Daily exposure to digital screens, pollution, irregular meals, and chronic stress accelerates oxidative damage impacting the eyes first, as they are among the most sensitive organs in the body.
                   ixan+ brings together a powerful blend of Curcuminoids, Lutein, Zeaxanthin, Bilberry, Licorice, Alpha Lipoic Acid, and Zinc to form a synergistic matrix that works at multiple levels:
                   <br />
-                  Supports ocular protection and strengthens retinal cells
-                  <br />
-                  Helps maintain visual performance under digital and environmental strain
-                  <br />
-                  Promotes metabolic balance, relevant for individuals at risk of or experiencing diabetic eye changes
-                  <br /><br />
+                  <ul className="list-disc pl-5 space-y-2 text-gray-700">
+                    <li>Supports ocular protection and strengthens retinal cells</li>
+                    <li>Helps maintain visual performance under digital and environmental strain</li>
+                    <li>Promotes metabolic balance, relevant for individuals at risk of or experiencing diabetic eye changes</li>
+                  </ul>
                   Formulated for modern lifestyles, ixan+ helps protect vision, naturally and effectively.
                 </p>
               </div>
 
               {/* IMAGE SECTION */}
               <div className="flex justify-center">
-                <div className="bg-[#0065A6] rounded-full 
-        w-52 h-52 
-        sm:w-64 sm:h-64 
-        md:w-80 md:h-80 
-        lg:w-[420px] lg:h-[420px] 
-        flex items-center justify-center">
-
-                  <img
-                    src={IxanBottle.src}
+                <div className="bg-[#0065A6] rounded-full  w-52 h-52 sm:w-64 sm:h-64  md:w-80 md:h-80 lg:w-[420px] lg:h-[420px] flex items-center justify-center">
+                  <Image
+                    src={IxanBottle}
                     alt="product image"
-                    className="object-contain 
-          w-40 sm:w-48 md:w-60 lg:w-[360px] 
-          mt-6 sm:mt-10 lg:mt-16"
+                    className="object-contain  w-40 sm:w-48 md:w-60 lg:w-[360px] mt-6 sm:mt-10 lg:mt-16"
                   />
                 </div>
               </div>
-
             </div>
-
             <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-20 grid grid-cols-1 gap-8">
 
               {/* HEADING */}
               <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug tracking-tight">
-                What Makes {product.name} Different?
+                What Makes ixan+ Different?
               </h2>
 
               {/* GRID ITEMS */}
@@ -522,9 +589,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
               </div>
             </div>
-
             <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16">
-
               {/* HEADING */}
               <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-3">
                 Know the Ingredients (Inside ixan+)
@@ -647,33 +712,42 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* TABLE WRAPPER (SCROLL ON MOBILE) */}
                 <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm sm:text-base">
 
-                  <table className="w-3/4 text-left text-sm sm:text-base ">
+                    {/* ✅ THEAD (single row) */}
                     <thead>
-                      <tr>
+                      <tr className="whitespace-nowrap">
                         <th className="py-3 px-3">Ingredients</th>
                         <th className="py-3 px-3">Amount per Capsule</th>
+                        <th className="py-3 px-3">% RDA</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {[
-                        ["Curcuminoids", "60 mg"],
-                        ["Lutein", "10 mg"],
-                        ["Trans Zeaxanthin", "1 mg"],
-                        ["Bilberry Extract", "50 mg"],
-                        ["Licorice Extract", "25 mg"],
-                        ["Alpha Lipoic Acid", "25 mg"],
-                        ["Zinc (as Zinc gluconate)", "10 mg"],
+                        ["Curcuminoids", "60mg †", "**"],
+                        ["Lutein", "10mg †", "**"],
+                        ["Zeaxanthin", "1mg †", "**"],
+                        ["Bilberry Extract", "50 mg", "**"],
+                        ["Licorice Extract", "25 mg", "**"],
+                        ["Alpha Lipoic Acid", "25 mg", "**"],
+                        [
+                          "Zinc (as Zinc gluconate)",
+                          "10 mg",
+                          <div key="zinc-rda" className="flex flex-col divide-y">
+                            <div className="py-1">*76% for women</div>
+                            <div className="py-1">*58.82% for men</div>
+                          </div>
+                        ]
                       ].map((row, i) => (
                         <tr key={i} className="border-t">
                           <td className="py-2 px-3">{row[0]}</td>
                           <td className="py-2 px-3">{row[1]}</td>
+                          <td className="py-2 px-3">{row[2]}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-
                 </div>
 
                 <p className=" mt-2 sm:mt-12 font-figtree font-normal text-base leading-6 tracking-normal">
@@ -688,52 +762,50 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                       <tr>
                         <th className="py-3 px-3">Nutrient</th>
                         <th className="py-3 px-3">Amount per Capsule</th>
+                        <th className="py-3 px-3">% RDA</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {[
-                        ["Energy", "2 kcal"],
-                        ["Protein", "<0.01 g"],
-                        ["Carbohydrate", "<0.2 g"],
-                        ["Sugar", "<0.05 g"],
-                        ["Fat", "<0.05 g"],
-                        ["Sodium", "<50 mg"],
+                        ["Energy", "2 kcal", "*0.1%"],
+                        ["Protein", "<0.01 g", "*0.018%"],
+                        ["Carbohydrate", "<0.2 g", "-"],
+                        ["Sugar", "<0.05 g", "-"],
+                        ["Fat", "<0.05 g", "-"],
+                        ["Sodium", "<50 mg", "*2.5%"],
                       ].map((row, i) => (
                         <tr key={i} className="border-t">
                           <td className="py-2 px-3">{row[0]}</td>
                           <td className="py-2 px-3">{row[1]}</td>
+                          <td className="py-2 px-3">{row[2]}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
 
                 </div>
-
                 <p className="text-sm mt-3">
                   ** RDA not established, *RDA as per ICMR 2020
                 </p>
-
               </div>
-
             </div>
-
-            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-10 sm:py-14 lg:py-16">
+            <div className="bg-[#FFFFFF] rounded-xl px-4 sm:px-8 lg:px-16 py-8 sm:py-14 lg:py-16">
 
               {/* HEADING */}
-              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-6">
+              <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] leading-snug mb-2">
                 FAQs
               </h2>
 
               {/* ACCORDION GRID */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
-                <Accordion items={faqs} />
-                <Accordion items={faqs} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <Accordion items={leftFaqs} />
+                <Accordion items={rightFaqs} />
               </div>
 
             </div>
 
-            <div className="rounded-xl mb-10 px-0 sm:px-8 lg:px-16 py-0 sm:py-14 lg:py-16">
+            <div className="rounded-xl mb-10  py-10 sm:py-14 lg:py-16 ">
 
               {/* HEADING */}
               <h2 className="font-bold text-xl sm:text-2xl lg:text-[28px] text-white mb-6 leading-snug">
@@ -751,16 +823,16 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                     {/* TITLE */}
                     <p className="text-base sm:text-lg lg:text-[20px] leading-relaxed mb-1">
-                      {testimonial.title}
+                      &ldquo;{testimonial.title}&rdquo;
                     </p>
 
                     {/* MESSAGE */}
-                    <p className="text-base sm:text-lg lg:text-[20px] leading-relaxed mb-4">
+                    <p className="text-base  lg:text-[20px] leading-relaxed mb-4 font-normal sm:text-[20px]  tracking-normal">
                       {testimonial.message}
                     </p>
 
                     {/* NAME */}
-                    <p className="text-sm sm:text-base lg:text-[18px] opacity-90">
+                    <p className="text-sm lg:text-[18px] opacity-90 font-normal sm:text-[20px] leading-[28px] tracking-normal">
                       — {testimonial.name}, {testimonial.city}
                     </p>
 

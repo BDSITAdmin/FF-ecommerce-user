@@ -1,80 +1,150 @@
 import axios from "axios";
 
+// const BASE_URL = "http://localhost:3000";
+const BASE_URL = "https://ff-ecommerce-production.up.railway.app";
+
 const api = axios.create({
-  baseURL: "https://ff-ecommerce-production.up.railway.app",
+  baseURL: BASE_URL,
   withCredentials: true,
 });
 
-const MAX_REFRESH_ATTEMPTS = 3;
-let refreshAttempts = 0;
+/* ======================================================
+  REFRESH CONTROL
+====================================================== */
+let isRefreshing = false;
+let refreshSubscribers = [];
 
-const forceLogout = () => {
-  if (globalThis.window === undefined) return;
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  globalThis.location.href = "/login";
+const subscribeTokenRefresh = (callback) => {
+  refreshSubscribers.push(callback);
 };
 
+const onRefreshed = (token) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
+
+/* ======================================================
+    FORCE LOGOUT (FIXED - NO LOOP)
+====================================================== */
+const forceLogout = async () => {
+  if (typeof window === "undefined") return;
+
+  try {
+    await axios.post(
+      `${BASE_URL}/api/v1/auth/logout`,
+      {},
+      { withCredentials: true }
+    );
+  } catch (e) {
+    // ignore errors
+  }
+
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  sessionStorage.clear();
+
+  //  Prevent infinite loop
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
+};
+
+/* ======================================================
+    AUTH ROUTES CHECK
+====================================================== */
 const isAuthRoute = (url = "") => {
   return [
     "/api/v1/auth/login",
     "/api/v1/auth/register",
     "/api/v1/auth/refresh",
     "/api/v1/auth/logout",
-  ].some((route) => url.includes(route));
+  ].some((route) => url?.includes(route));
 };
 
-api.interceptors.request.use((config) => {
-  const requestUrl = config?.url || "";
-  if (globalThis.window === undefined) return config;
-  if (isAuthRoute(requestUrl)) return config;
+/* ======================================================
+    REQUEST INTERCEPTOR
+====================================================== */
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window === "undefined") return config;
 
-  const token = localStorage.getItem("token");
-  if (!token) return config;
+    const token = localStorage.getItem("token");
 
-  config.headers = config.headers || {};
-  if (!config.headers.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+    if (token && !isAuthRoute(config.url)) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+/* ======================================================
+    RESPONSE INTERCEPTOR (FIXED)
+====================================================== */
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config || {};
-    const requestUrl = originalRequest.url || "";
 
+  async (error) => {
+    const originalRequest = error.config;
+
+    //  Stop everything if already on login page
+    if (typeof window !== "undefined" && window.location.pathname === "/login") {
+      return Promise.reject(error);
+    }
+
+    //  Handle 401
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.skipAuthRefresh &&
-      !isAuthRoute(requestUrl)
+      !isAuthRoute(originalRequest.url)
     ) {
-      if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
-        forceLogout();
-        throw error;
+      // 🔁 If already refreshing → queue requests
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(api(originalRequest));
+          });
+        });
       }
 
       originalRequest._retry = true;
-      refreshAttempts += 1;
+      isRefreshing = true;
 
       try {
-        await axios.post(
-          "http://localhost:3000/api/v1/auth/refresh",
+        const res = await axios.post(
+          `${BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );
-        refreshAttempts = 0;
+
+        const newToken = res.data?.accessToken;
+
+        if (!newToken) throw new Error("No access token returned");
+
+        //  Save token
+        localStorage.setItem("token", newToken);
+
+        //  Notify queued requests
+        onRefreshed(newToken);
+        isRefreshing = false;
+
+        //  Retry original request
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
-      } catch {
-        if (refreshAttempts >= MAX_REFRESH_ATTEMPTS) {
-          forceLogout();
-        }
+      } catch (refreshError) {
+        isRefreshing = false;
+
+
+        await forceLogout();
+
+        return Promise.reject(refreshError);
       }
     }
 
-    throw error;
+    return Promise.reject(error);
   }
 );
 

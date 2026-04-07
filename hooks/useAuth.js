@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useDispatch } from "react-redux";
-import { setUser, logout } from "../store/userSlice";
+import { setUser, clearUser } from "../store/userSlice";
 import { getCurrentUser, loginUser, logoutUser } from "../services/auth.service";
+
 
 export const useAuth = () => {
   const dispatch = useDispatch();
@@ -42,17 +43,13 @@ export const useAuth = () => {
         if (typeof token === "string" && token) {
           localStorage.setItem("token", token);
         }
-      } catch {}
+      } catch { }
 
       let currentUser =
         res?.data?.user ??
         res?.data?.data?.user ??
         res?.data?.data ??
         null;
-
-      // Some APIs only set cookies/tokens on login and don't return user details.
-      // In that case, fetch `/me` to populate the store so the UI shows the user name.
-      // Also fetch `/me` when the login payload doesn't include `firstName`.
       if (!currentUser || !hasFirstName(currentUser)) {
         const delays = [0, 250, 750];
         for (const delayMs of delays) {
@@ -68,7 +65,7 @@ export const useAuth = () => {
               null;
             if (meUser) currentUser = meUser;
             if (currentUser && hasFirstName(currentUser)) break;
-          } catch {}
+          } catch { }
         }
       }
 
@@ -99,8 +96,21 @@ export const useAuth = () => {
   };
 
   const logoutAction = async () => {
-    await logoutUser();
-    dispatch(logout());
+    try {
+      await logoutUser(); // backend logout (cookie clear)
+    } catch (err) {
+      console.warn("Logout API failed, forcing logout...");
+    }
+
+    // ✅ Always clear frontend state
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.clear();
+
+    dispatch(clearUser());
+
+    // ✅ Redirect
+    window.location.replace("/login");
   };
 
   return { login, logoutAction, isLoading };

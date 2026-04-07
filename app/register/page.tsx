@@ -101,6 +101,7 @@ export default function Register() {
     } finally {
       setIsLoading(false);
     }
+    console.log("API HIT");
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

@@ -188,7 +188,7 @@ export const useCheckoutForm = () => {
     },
     [dispatch, shippingAddress, isSubmitting]
   );
-
+  
   const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);
 
   return {

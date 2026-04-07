@@ -41,7 +41,7 @@ const Footer = () => {
                         <div className="flex gap-3 mt-4">
 
                             <a
-                                href="https://linkedin.com"
+                                href="/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label="LinkedIn"
@@ -51,7 +51,7 @@ const Footer = () => {
                             </a>
 
                             <a
-                                href="https://instagram.com"
+                                href="/"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label="Instagram"

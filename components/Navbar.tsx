@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useAuth } from "../hooks/useAuth";
-import Logo from "../public/assate/Layer_1.png";
+import Logo from "../public/assate/home-logo.svg";
 import Cart from "../public/icons/cart.svg";
 
 type RootState = {
@@ -91,17 +91,17 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-[#181818] text-green-800 shadow-sm">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-50 w-full border-b  bg-[#181818]  shadow-sm">
+      <div className="container mx-auto flex h-20 items-center justify-between  md:px-6">
 
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 px-3 sm:px-0">
           <Image
             src={Logo}
             alt="E-commStore"
             width={168}
             height={42}
-            className="h-[42px] w-[168px] object-contain"
+            className="h-[32px] w-auto sm:h-[36px] md:h-[42px] object-contain"
             priority
           />
         </div>
@@ -142,12 +142,17 @@ export default function Header() {
           </button> */}
 
           {/* Cart */}
-          <Link href="/cart" className="relative rounded-full p-2.5">
-<Image src={Cart} alt="Cart" width={36} height={36} className="" />
-
+          <Link href="/cart" className="relative rounded-full p-2 sm:p-2.5">
+            <Image
+              src={Cart}
+              alt="Cart"
+              width={36}
+              height={36}
+              className="h-6 w-6 sm:h-7 sm:w-7 md:h-9 md:w-9 object-contain"
+            />
 
             {cartItems.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-green-600 text-[10px] sm:text-xs font-bold text-white">
                 {cartItems.length}
               </span>
             )}
@@ -159,10 +164,10 @@ export default function Header() {
               onClick={() => setIsMenuOpen((prev) => !prev)}
               className="rounded-full px-3 py-2 cursor-pointer flex items-center gap-2"
             >
-              <span className="text-sm font-medium text-white max-w-32 truncate">
+              <span className=" text-sm sm:text-2xl font-medium text-white max-w-32 truncate">
                 {userName}
               </span>
-              <ChevronDown className="h-4 w-4 text-white" />
+              <ChevronDown className="h-6 w-6 sm:h-4 sm:w-4 text-white" />
             </button>
 
             {isMenuOpen && (
