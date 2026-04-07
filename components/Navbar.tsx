@@ -92,10 +92,10 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b  bg-[#181818]  shadow-sm">
-      <div className="container mx-auto flex h-20 items-center justify-between  md:px-6">
+      <div className="container mx-auto flex h-20 items-center justify-between ">
 
         {/* Logo */}
-        <div className="flex items-center gap-2 px-3 sm:px-0">
+        <div className="flex items-center gap-2 pl-3  sm:px-0">
           <Image
             src={Logo}
             alt="E-commStore"
@@ -164,7 +164,7 @@ export default function Header() {
               onClick={() => setIsMenuOpen((prev) => !prev)}
               className="rounded-full px-3 py-2 cursor-pointer flex items-center gap-2"
             >
-              <span className=" text-sm sm:text-2xl font-medium text-white max-w-32 truncate">
+              <span className=" text-sm sm:text-xl font-medium text-white max-w-32 truncate">
                 {userName}
               </span>
               <ChevronDown className="h-6 w-6 sm:h-4 sm:w-4 text-white" />

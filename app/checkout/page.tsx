@@ -15,7 +15,7 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-white  text-black">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 pb-4 sm:px-6 lg:px-12">
         <Link href="/cart" className="flex items-center gap-2 mt-8 text-[#0065A6] hover:text-black mb-8 inline-flex">
           <ArrowLeft size={20} />
           Back to Cart
@@ -148,7 +148,7 @@ export default function CheckoutPage() {
             <input type="hidden" {...form.register('saveInfo')} />
           </div>
 
-          <aside className="bg-white shadow-2xl rounded-3xl p-6 border border-black/10 h-fit lg:sticky lg:top-8">
+          <aside className="bg-white shadow-2xl rounded-3xl p-6 border border-black/10 h-fit lg:sticky lg:top-8 lg:self-start"> 
             <h3 className="text-lg font-semibold mb-4">Order Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
