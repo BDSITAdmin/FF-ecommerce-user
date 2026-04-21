@@ -1,7 +1,11 @@
 import axios from "axios";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://ff-ecommerce-production.up.railway.app";
+
 const api = axios.create({
-  baseURL: "https://ff-ecommerce-production.up.railway.app",
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 
@@ -61,7 +65,7 @@ api.interceptors.response.use(
 
       try {
         await axios.post(
-          "http://localhost:3000/api/v1/auth/refresh",
+          `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );
