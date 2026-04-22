@@ -29,6 +29,26 @@ type ProductDetailsProps = {
   productId?: string | number | null;
 };
 
+type ProductPackPricing = {
+  mrp?: number;
+  discount?: number;
+  subtotal?: number;
+  shipping?: number;
+  tax?: number;
+  totalSavings?: number;
+  totalToPay?: number;
+};
+
+type ProductPack = {
+  id: string;
+  productId: string;
+  label: string;
+  quantity: number;
+  isActive: boolean;
+  sortOrder?: number;
+  pricing?: ProductPackPricing;
+};
+
 const ingredients = [
   {
     heading: "Curcuminoids (60 mg)",
@@ -202,9 +222,13 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
   const dispatch = useDispatch<any>();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
+  const cartItems = useSelector((state: { cart: { items: any[] } }) => state.cart.items || []);
   const [product, setProduct] = useState<Product | null>(null);
+  const [packs, setPacks] = useState<ProductPack[]>([]);
+  const [selectedPackId, setSelectedPackId] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const resolvedProductId = normalizeProductId(productId);
 
@@ -218,6 +242,38 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
       })
       .catch((err) => console.error(err));
   }, [resolvedProductId]);
+
+  useEffect(() => {
+    if (!resolvedProductId) return;
+
+    api
+      .get(`/api/v1/products/${resolvedProductId}/packs`)
+      .then((res) => {
+        const apiPacks = (res?.data?.data?.packs ?? []) as ProductPack[];
+        const activePacks = apiPacks
+          .filter((pack) => pack?.isActive !== false)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        setPacks(activePacks);
+        setSelectedPackId((prev) => {
+          if (prev && activePacks.some((pack) => pack.id === prev)) return prev;
+          return activePacks[0]?.id ?? "";
+        });
+      })
+      .catch(() => {
+        setPacks([]);
+        setSelectedPackId("");
+      });
+  }, [resolvedProductId]);
+
+  const selectedPack = useMemo(() => {
+    if (!packs.length) return null;
+    return packs.find((pack) => pack.id === selectedPackId) ?? packs[0] ?? null;
+  }, [packs, selectedPackId]);
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedPackId]);
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
@@ -247,16 +303,67 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     setSelectedIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
   };
 
-  const handleAddToCart = () => {
+  const selectedVariantKey = useMemo(
+    () => `${String(product?.id ?? "")}::${String(selectedPack?.id || "default")}`,
+    [product?.id, selectedPack?.id]
+  );
+
+  const isSelectedVariantInCart = useMemo(() => {
+    return cartItems.some((item) => {
+      const itemKey = `${String(item?.id ?? "")}::${String(item?.packId || "default")}`;
+      return itemKey === selectedVariantKey;
+    });
+  }, [cartItems, selectedVariantKey]);
+
+  const handleAddToCart = async () => {
     if (!product) return;
+
+    if (isSelectedVariantInCart) {
+      router.push("/cart");
+      return;
+    }
+
     if (!user) {
       router.push("/login");
       return;
     }
-    for (let i = 0; i < quantity; i += 1) {
-      dispatch((addToCartAsync as any)({ product, quantity: 1 }));
+
+    const selectedPackQuantity = Math.max(1, Number(selectedPack?.quantity || 1));
+    const selectedPackMrp = Number(selectedPack?.pricing?.mrp ?? product.price ?? 0);
+
+    const productForCart = {
+      ...product,
+      price: selectedPackMrp,
+      packId: selectedPack?.id,
+      packLabel: selectedPack?.label,
+      packSize: selectedPackQuantity,
+      packQuantity: selectedPackQuantity,
+      packMrp: selectedPackMrp,
+    };
+
+    setIsAddingToCart(true);
+    try {
+      const action = await dispatch((addToCartAsync as any)({ product: productForCart, quantity }));
+      if (action?.meta?.requestStatus === "fulfilled") {
+        const detail = {
+          name: productForCart.name,
+          image: productForCart.images?.[0] || productForCart.image || "",
+          packLabel: productForCart.packLabel || `${selectedPackQuantity} units`,
+          quantity,
+          units: totalUnits,
+          price: selectedPackMrp,
+          lineTotal: selectedPackMrp * quantity,
+        };
+        globalThis.window?.dispatchEvent(new CustomEvent("cart:item-added", { detail }));
+      }
+    } finally {
+      setIsAddingToCart(false);
     }
   };
+
+  const selectedPackQuantity = Math.max(1, Number(selectedPack?.quantity || 1));
+  const displayPrice = Number(selectedPack?.pricing?.mrp ?? product?.price ?? 0);
+  const totalUnits = quantity * selectedPackQuantity;
 
   if (!resolvedProductId) {
     return <div className="p-10">Loading...</div>;
@@ -361,10 +468,50 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               {product.description || "No description available"}
             </p>
 
-            <p className=" text-[36px] font-semibold ">Rs. {product.price}/-</p>
-            <p className="text-gray-600 mb-26">
+            <div className=" sm:mt-14 mb-4">
+            <p className="text-2xl  font-figtree font-semibold sm:text-[36px] leading-[36px] tracking-normal">
+              Rs. {product.price}/-
+            </p>
+
+            <p className="text-[#181818] text-sm sm:text-xl font-normal mt-3 ">
               Pack Size: 60 Veg Capsules (2-Month Pack)
             </p>
+          </div>
+
+            {/* <p className=" text-[36px] font-semibold ">Rs. {displayPrice}/-</p>
+            <p className="text-gray-600 mb-4">
+              {selectedPack
+                ? `${selectedPack.label} (${selectedPack.quantity} units)`
+                : "Pack Size: 60 Veg Capsules (2-Month Pack)"}
+            </p> */}
+
+            {packs.length > 0 && (
+              <div className="mb-8">
+                <p className="mb-3 text-sm font-semibold text-gray-700">Select Pack Size</p>
+                <div className="flex flex-wrap gap-3">
+                  {packs.map((pack) => {
+                    const packMrp = Number(pack.pricing?.mrp ?? 0);
+                    const isSelected = selectedPack?.id === pack.id;
+                    return (
+                      <button
+                        key={pack.id}
+                        type="button"
+                        onClick={() => setSelectedPackId(pack.id)}
+                        className={`rounded-lg border px-4 py-3 text-left transition ${
+                          isSelected
+                            ? "border-[#0065A6] bg-[#0065A6]/10"
+                            : "border-[#C5C5C5] hover:border-[#0065A6]/50"
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{pack.label}</p>
+                        <p className="text-xs text-gray-600">Qty: {pack.quantity}</p>
+                        <p className="text-sm font-bold text-[#0065A6]">Rs. {packMrp}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-4 ">
               <div className="inline-flex w-36.75 h-13 items-center rounded-md border border-[#C5C5C5]">
@@ -389,12 +536,17 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 </button>
               </div>
 
+              <p className="text-sm text-gray-600">
+                {quantity} pack(s) x {selectedPackQuantity} units = {totalUnits} units
+              </p>
+
               <button
                 type="button"
                 onClick={handleAddToCart}
-                className="rounded-full bg-[#0065A6] w-78.25 px-9 py-4 font-medium text-white "
+                disabled={isAddingToCart}
+                className="rounded-full bg-[#0065A6] w-78.25 px-9 py-4 font-medium text-white disabled:opacity-70"
               >
-                Add to Cart
+                {isAddingToCart ? "Adding..." : isSelectedVariantInCart ? "Go to Cart" : "Add to Cart"}
               </button>
             </div>
           </div>

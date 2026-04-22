@@ -135,9 +135,18 @@ export const useCheckoutForm = () => {
       setSubmitSuccess("");
 
       try {
+        const totalPayFromSession =
+          globalThis.window !== undefined
+            ? Number(sessionStorage.getItem("checkout_total_pay") || 0)
+            : 0;
+
         const res = await checkout({
           shippingAddress,
           paymentMethod: data.paymentMethod,
+          totalPay:
+            Number.isFinite(totalPayFromSession) && totalPayFromSession > 0
+              ? totalPayFromSession
+              : undefined,
         });
 
         // ✅ COD FLOW

@@ -21,6 +21,16 @@ type RootState = {
   cart: { items: unknown[] };
 };
 
+type CartAddedDetail = {
+  name?: string;
+  image?: string;
+  packLabel?: string;
+  quantity?: number;
+  units?: number;
+  price?: number;
+  lineTotal?: number;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -55,12 +65,15 @@ export default function Header() {
   const router = useRouter();
   const { logoutAction } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const cartToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const user = useSelector((state: RootState) => state.user.user);
   const cartItems = useSelector((state: RootState) => state.cart.items) || [];
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showCartTooltip, setShowCartTooltip] = useState(false);
+  const [cartTooltipData, setCartTooltipData] = useState<CartAddedDetail | null>(null);
 
   const userName = getUserDisplayName(user);
 
@@ -77,6 +90,30 @@ export default function Header() {
     return () =>
       document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  useEffect(() => {
+    const handleCartItemAdded = (event: Event) => {
+      const customEvent = event as CustomEvent<CartAddedDetail>;
+      setCartTooltipData(customEvent.detail || {});
+      setShowCartTooltip(true);
+
+      if (cartToastTimerRef.current) clearTimeout(cartToastTimerRef.current);
+      cartToastTimerRef.current = setTimeout(() => {
+        setShowCartTooltip(false);
+      }, 2600);
+    };
+
+    globalThis.window?.addEventListener("cart:item-added", handleCartItemAdded);
+
+    return () => {
+      globalThis.window?.removeEventListener("cart:item-added", handleCartItemAdded);
+      if (cartToastTimerRef.current) {
+        clearTimeout(cartToastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const formatAmount = (value: unknown) => Math.round(Number(value || 0)).toLocaleString("en-IN");
 
   const handleLogout = async () => {
     try {
@@ -142,16 +179,51 @@ export default function Header() {
           </button> */}
 
           {/* Cart */}
-          <Link href="/cart" className="relative rounded-full p-2.5">
-<Image src={Cart} alt="Cart" width={36} height={36} className="" />
+          <div className="relative">
+            <Link href="/cart" className="relative rounded-full p-2.5 block">
+              <Image src={Cart} alt="Cart" width={36} height={36} className="" />
 
+              {cartItems.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+                  {cartItems.length}
+                </span>
+              )}
+            </Link>
 
-            {cartItems.length > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
-                {cartItems.length}
-              </span>
+            {showCartTooltip && cartTooltipData && (
+              <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-80 rounded-xl border border-[#D1FAE5] bg-white p-4 shadow-2xl">
+                <div className="absolute -top-2 right-6 h-4 w-4 rotate-45 border-l border-t border-[#D1FAE5] bg-white" />
+                <p className="text-sm font-semibold text-[#047857]">Added to cart</p>
+
+                <div className="mt-3 flex items-start gap-3">
+                  <img
+                    src={cartTooltipData.image || "/assate/home-image.webp"}
+                    alt={cartTooltipData.name || "Product"}
+                    className="h-14 w-14 rounded-md border border-gray-200 object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-900">{cartTooltipData.name || "Item"}</p>
+                    <p className="mt-1 text-xs text-gray-600">{cartTooltipData.packLabel || "Pack"}</p>
+                    <p className="mt-1 text-xs text-gray-600">
+                      Qty: {cartTooltipData.quantity || 1} pack(s) • {cartTooltipData.units || 1} units
+                    </p>
+                    <p className="mt-2 text-sm font-bold text-[#0065A6]">Rs. {formatAmount(cartTooltipData.lineTotal || cartTooltipData.price)}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCartTooltip(false);
+                    router.push("/cart");
+                  }}
+                  className="mt-3 w-full rounded-lg bg-[#0065A6] px-3 py-2 text-sm font-medium text-white"
+                >
+                  Go to Cart
+                </button>
+              </div>
             )}
-          </Link>
+          </div>
 
           {/* User Menu */}
           <div className="relative" ref={menuRef}>

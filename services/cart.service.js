@@ -1,7 +1,7 @@
 import api from "./api";
 
-export const addCartItem = ({ productId, quantity }) => {
-  return api.post("/api/v1/cart/items", { productId, quantity });
+export const addCartItem = ({ productId, packSize, quantity }) => {
+  return api.post("/api/v1/cart/items", { productId, packSize, quantity });
 };
 
 export const getCart = () => {
@@ -26,19 +26,21 @@ export const removeCartItem = async ({ productId }) => {
   return api.delete("/api/v1/cart/items", { data: { productId } });
 };
 
-export const updateCartItemQuantity = async ({ productId, quantity }) => {
+export const updateCartItemQuantity = async ({ productId, packSize, quantity }) => {
   if (!productId) throw new Error("Missing productId");
+
+  const payload = { quantity, packSize };
 
   // Try the most common REST shapes first.
   try {
-    return await api.patch(`/api/v1/cart/items/${productId}`, { quantity });
+    return await api.patch(`/api/v1/cart/items/${productId}`, payload);
   } catch (err) {
     const status = err?.response?.status;
     if (status !== 404 && status !== 405) throw err;
   }
 
   try {
-    return await api.put(`/api/v1/cart/items/${productId}`, { quantity });
+    return await api.put(`/api/v1/cart/items/${productId}`, payload);
   } catch (err) {
     const status = err?.response?.status;
     if (status !== 404 && status !== 405) throw err;
@@ -47,12 +49,12 @@ export const updateCartItemQuantity = async ({ productId, quantity }) => {
   throw new Error("Cart quantity update endpoint not available");
 };
 
-export const decrementCartItem = async ({ productId }) => {
+export const decrementCartItem = async ({ productId, packSize }) => {
   if (!productId) throw new Error("Missing productId");
 
   // Most compatible: reuse add endpoint as a delta (if supported).
   try {
-    return await addCartItem({ productId, quantity: -1 });
+    return await addCartItem({ productId, packSize, quantity: -1 });
   } catch (err) {
     const status = err?.response?.status;
     if (status !== 400 && status !== 404 && status !== 405) throw err;

@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, Truck, Leaf, ShoppingCart } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  addToCartAsync,
   clearCartAsync,
   fetchCart,
   removeFromCartAsync,
-  removeSingleFromCartAsync,
+  setCartItemQuantityAsync,
 } from "../../store/cartSlice";
 import Navbar from "../../components/Navbar";
+import api from "../../services/api";
 import { store } from "../../store/store";
 
 type CartItem = {
@@ -22,6 +22,11 @@ type CartItem = {
   category?: string;
   images?: string[];
   image?: string;
+  packId?: string;
+  packSize?: number;
+  packLabel?: string;
+  packQuantity?: number;
+  packMrp?: number;
 };
 
 type RootState = {
@@ -46,31 +51,166 @@ export default function CartPage() {
     }
   }, [dispatch, user]);
 
-  const handleAddToCart = (item: CartItem) => {
+  const handleIncreaseQuantity = (item: CartItem & { quantity: number }) => {
     if (!user) {
       router.push("/login");
       return;
     }
-    dispatch(addToCartAsync({ product: item, quantity: 1 }));
+    dispatch(
+      setCartItemQuantityAsync({
+        product: item,
+        productId: item.id,
+        packId: item.packId,
+        packSize: item.packQuantity,
+        quantity: item.quantity + 1,
+      })
+    );
+  };
+
+  const handleDecreaseQuantity = (item: CartItem & { quantity: number }) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const nextQuantity = Math.max(1, item.quantity - 1);
+    if (nextQuantity === item.quantity) return;
+
+    dispatch(
+      setCartItemQuantityAsync({
+        product: item,
+        productId: item.id,
+        packId: item.packId,
+        packSize: item.packQuantity,
+        quantity: nextQuantity,
+      })
+    );
   };
 
   const groupedItems = useMemo(() => {
-    const map = new Map<string | number, CartItem & { quantity: number }>();
+    const map = new Map<string, CartItem & { quantity: number; cartKey: string }>();
     for (const item of cartItems) {
-      const existing = map.get(item.id);
+      const cartKey = `${item.id}::${item.packId || "default"}`;
+      const existing = map.get(cartKey);
       if (existing) {
         existing.quantity += 1;
       } else {
-        map.set(item.id, { ...item, quantity: 1 });
+        map.set(cartKey, { ...item, quantity: 1, cartKey });
       }
     }
     return Array.from(map.values());
   }, [cartItems]);
 
-  const subtotal = groupedItems.reduce(
+  const [invoiceTotal, setInvoiceTotal] = useState<number>(0);
+  const [invoiceBreakdown, setInvoiceBreakdown] = useState({
+    mrp: 0,
+    discount: 0,
+    totalSavings: 0,
+    shipping: 0,
+    tax: 0,
+    totalToPay: 0,
+  });
+
+  const fallbackSubtotal = groupedItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * item.quantity,
     0
   );
+
+  useEffect(() => {
+    if (!groupedItems.length) {
+      setInvoiceTotal(0);
+      setInvoiceBreakdown({
+        mrp: 0,
+        discount: 0,
+        totalSavings: 0,
+        shipping: 0,
+        tax: 0,
+        totalToPay: 0,
+      });
+      if (globalThis.window !== undefined) {
+        sessionStorage.setItem("checkout_total_pay", "0");
+      }
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadInvoiceTotal = async () => {
+      const totals = await Promise.all(
+        groupedItems.map(async (item) => {
+          const packQuantity = Math.max(1, Number(item.packQuantity || item.packSize || 1));
+          const qty = Math.max(1, Number(item.quantity || 1));
+
+          try {
+            const res = await api.get(`/api/v1/products/${item.id}/packs`, {
+              params: { quantity: packQuantity },
+            });
+
+            const pack = res?.data?.data?.packs?.[0];
+            const totalToPay = Number(pack?.pricing?.totalToPay);
+            const mrp = Number(pack?.pricing?.mrp || 0);
+            const discount = Number(pack?.pricing?.discount || 0);
+            const totalSavings = Number(pack?.pricing?.totalSavings || 0);
+            const shipping = Number(pack?.pricing?.shipping || 0);
+            const tax = Number(pack?.pricing?.tax || 0);
+
+            if (Number.isFinite(totalToPay) && totalToPay > 0) {
+              return {
+                mrp: mrp * qty,
+                discount: discount * qty,
+                totalSavings: totalSavings * qty,
+                shipping: shipping * qty,
+                tax: tax * qty,
+                totalToPay: totalToPay * qty,
+              };
+            }
+          } catch {
+            // Fallback to cart line pricing when pack pricing API is unavailable.
+          }
+
+          const fallbackTotal = Number(item.price || 0) * qty;
+          return {
+            mrp: fallbackTotal,
+            discount: 0,
+            totalSavings: 0,
+            shipping: 0,
+            tax: 0,
+            totalToPay: fallbackTotal,
+          };
+        })
+      );
+
+      if (cancelled) return;
+
+      const computedBreakdown = totals.reduce(
+        (acc, row) => ({
+          mrp: acc.mrp + Number(row?.mrp || 0),
+          discount: acc.discount + Number(row?.discount || 0),
+          totalSavings: acc.totalSavings + Number(row?.totalSavings || 0),
+          shipping: acc.shipping + Number(row?.shipping || 0),
+          tax: acc.tax + Number(row?.tax || 0),
+          totalToPay: acc.totalToPay + Number(row?.totalToPay || 0),
+        }),
+        { mrp: 0, discount: 0, totalSavings: 0, shipping: 0, tax: 0, totalToPay: 0 }
+      );
+
+      const computedTotal = computedBreakdown.totalToPay;
+      setInvoiceTotal(computedTotal);
+      setInvoiceBreakdown(computedBreakdown);
+
+      if (globalThis.window !== undefined) {
+        sessionStorage.setItem("checkout_total_pay", String(computedTotal));
+      }
+    };
+
+    loadInvoiceTotal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groupedItems]);
+
+  const subtotal = invoiceTotal || fallbackSubtotal;
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
 
@@ -133,9 +273,10 @@ export default function CartPage() {
               <div className="space-y-4 bg-white backdrop-blur-sm border border-[#0065A4] rounded-xl p-6 ">
                 {groupedItems.map((item, index) => {
                   const itemImage = item.images?.[0] || item.image || "/assate/home-image.webp";
+                  const lineTotal = Number(item.price || 0) * item.quantity;
                   return (
                     <div
-                      key={item.id}
+                      key={item.cartKey}
                       className="group grid grid-cols-[100px_1fr_auto] gap-6 items-center  rounded-2xl  transition-all duration-300"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
@@ -157,25 +298,37 @@ export default function CartPage() {
                           <Leaf className="w-3 h-3" />
                           {item.category || "General"}
                         </p>
+                        {item.packLabel && (
+                          <p className="text-black text-sm mt-1">
+                            {item.packLabel} ({item.packQuantity || 1} units per pack)
+                          </p>
+                        )}
                        
                       </div>
 
                       {/* Actions */}
                       <div className="flex flex-col items-end gap-4">
                         <button
-                          onClick={() => dispatch(removeFromCartAsync(item.id))}
+                          onClick={() =>
+                            dispatch(
+                              removeFromCartAsync({
+                                productId: item.id,
+                                packId: item.packId,
+                              })
+                            )
+                          }
                           className="text-[#000000] hover:text-red-600 transition-colors p-2 hover:bg-red-50  rounded-full"
                           aria-label={`Remove ${item.name}`}
                         >
                           <Trash2 className="w-6 h-6" />
                         </button>
                          <p className="text-3xl font-bold text-black">
-                          Rs. {formatAmount(Number(item.price))}
+                            Rs. {formatAmount(lineTotal)}
                         </p>
 
                         <div className="flex items-center gap-3   px-4 py-3 border border-[#C5C5C5]">
                           <button
-                            onClick={() => dispatch(removeSingleFromCartAsync(item.id))}
+                            onClick={() => handleDecreaseQuantity(item)}
                             className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
                             aria-label={`Decrease quantity of ${item.name}`}
                           >
@@ -185,13 +338,16 @@ export default function CartPage() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => handleAddToCart(item)}
+                            onClick={() => handleIncreaseQuantity(item)}
                             className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
                             aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
+                        <p className="text-xs text-gray-600">
+                          {item.quantity} pack(s) x {item.packQuantity || 1} units
+                        </p>
                       </div>
                     </div>
                   );
@@ -217,23 +373,58 @@ export default function CartPage() {
               <div className="space-y-5 pb-6 border-b border-[#6F6F6F]">
 
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Subtotal</span>
+                  <span className="text-gray-700">Total MRP</span>
                   <span className="font-semibold text-black text-lg">
-                    Rs. {formatAmount(subtotal)}
+                    Rs. {formatAmount(invoiceBreakdown.mrp || subtotal)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Discount</span>
+                  <span className="font-semibold text-green-700">
+                    - Rs. {formatAmount(invoiceBreakdown.discount || 0)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">
+                    Tax <span className="text-[#16A34A]">(Free)</span>
+                  </span>
+                  <span className="text-right">
+                    <span className="font-semibold text-[#0065A6]">Free</span>
+                    <span className="ml-2 text-sm text-gray-500">
+                      Rs. {formatAmount(invoiceBreakdown.tax || 0)}
+                    </span>
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 flex items-center gap-2">
                     Delivery Fee
+                    <span className="text-[#16A34A]">(Free)</span>
                     <Truck className="w-4 h-4 text-[#0065A6]" />
                   </span>
 
-                  <span className="font-semibold text-[#0065A6]">
-                    Free
+                  <span className="text-right">
+                    <span className="font-semibold text-[#0065A6]">Free</span>
+                    <span className="ml-2 text-sm text-gray-500">
+                      Rs. {formatAmount(invoiceBreakdown.shipping || 0)}
+                    </span>
                   </span>
                 </div>
 
+              </div>
+
+              <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-700">You are saving</span>
+                  <span className="text-xl font-extrabold text-green-700">
+                    Rs. {formatAmount(invoiceBreakdown.totalSavings || invoiceBreakdown.discount || 0)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-green-700/90">
+                  Great deal. Your discount and offers are already applied.
+                </p>
               </div>
 
               {/* Total */}
