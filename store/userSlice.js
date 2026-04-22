@@ -1,26 +1,38 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const initialUser = globalThis.window === undefined
-  ? null
-  : JSON.parse(localStorage.getItem("user"));
+/* =========================================
+   🧠 SAFE LOCAL STORAGE
+========================================= */
+const getStoredUser = () => {
+  if (typeof window === "undefined") return null;
 
+  try {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+};
+
+const initialState = {
+  user: getStoredUser(),
+};
+
+/* =========================================
+   🧩 SLICE
+========================================= */
 const userSlice = createSlice({
   name: "user",
-  initialState: {
-    user: initialUser,
-  },
+  initialState,
   reducers: {
     setUser: (state, action) => {
       state.user = action.payload;
-      localStorage.setItem("user", JSON.stringify(action.payload));
     },
-    logout: (state) => {
+    clearUser: (state) => {
       state.user = null;
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
     },
   },
 });
 
-export const { setUser, logout } = userSlice.actions;
+export const { setUser, clearUser } = userSlice.actions;
 export default userSlice.reducer;

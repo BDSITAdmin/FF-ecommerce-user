@@ -34,7 +34,7 @@ function AuthInitializer({ children }: { children: ReactNode }) {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <Provider store={store}>
           <AuthInitializer>

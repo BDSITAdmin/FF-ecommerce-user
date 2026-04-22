@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, Truck, Leaf, ShoppingCart } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,6 +15,7 @@ import {
 import Navbar from "../../components/Navbar";
 import api from "../../services/api";
 import { store } from "../../store/store";
+import ixanLogo from "../../public/assate/ixan-logo.svg";
 
 type CartItem = {
   id: string | number;
@@ -214,7 +216,7 @@ export default function CartPage() {
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
 
-  
+
 
   return (
     <main className="min-h-screen bg-white">
@@ -224,28 +226,26 @@ export default function CartPage() {
       <div className="absolute top-20 left-0 w-64 h-64 bg-green-200/20 rounded-full blur-3xl -z-10"></div>
       <div className="absolute bottom-20 right-0 w-96 h-96 bg-green-300/20 rounded-full blur-3xl -z-10"></div> */}
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 relative">
-
-        {/* Header with Icon */}
-        {/* <div className="flex items-center gap-4 mb-8">
-          <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-600/20">
-            <ShoppingBag className="w-7 h-7 text-white" />
-          </div>
-          <h3 className="text-2xl font-light tracking-wide text-black">
-            YOUR <span className="font-semibold text-black">CART</span>
-          </h3>
-        </div> */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-8 py-6 sm:py-8">
 
         {groupedItems.length === 0 ? (
-          <div className="backdrop-blur-sm border border-[#0065A6] rounded-3xl p-16 text-center shadow-xl">
-            <div className="w-24 h-24 bg-[#0065A6] rounded-full flex items-center justify-center mx-auto mb-6">
-              <ShoppingBag className="w-12 h-12 text-white" />
+          /* ================= EMPTY CART ================= */
+          <div className="border border-[#0065A6] rounded-3xl p-10 sm:p-16 text-center shadow-xl">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#0065A6] rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShoppingCart className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
             </div>
-            <h2 className="text-3xl font-semibold text-black mb-3">Your cart is empty</h2>
-            <p className="text-black/70 mb-8">Looks like you haven&apos;t added anything yet</p>
+
+            <h2 className="text-2xl sm:text-3xl font-semibold text-black mb-3">
+              Your cart is empty
+            </h2>
+
+            <p className="text-black/70 mb-6 sm:mb-8">
+              Looks like you haven&apos;t added anything yet
+            </p>
+
             <Link
               href="/"
-              className="inline-flex items-center gap-2 bg-[#0065A6] text-white px-8 py-4 rounded-full font-medium transition-all shadow-lg "
+              className="inline-flex items-center gap-2 bg-[#0065A6] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full font-medium shadow-lg"
             >
               Continue Shopping
               <ArrowRight className="w-4 h-4" />
@@ -254,23 +254,27 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8">
             {/* Cart Items Section */}
-            <section className="">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-black">
-                  <ShoppingCart className="w-8 h-8 inline-block mr-4 mb-2" />
+            <section>
+              {/* HEADER */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+
+                <h2 className="text-xl sm:text-2xl font-semibold text-black flex items-center gap-2">
+                  <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8" />
                   Cart Items ({groupedItems.length})
                 </h2>
 
                 <button
                   type="button"
                   onClick={() => dispatch(clearCartAsync())}
-                  className="px-4 py-2 rounded-full border border-[#0065A4] text-[#0065A4] font-medium hover:bg-[#0065A4] hover:text-white transition"
+                  className="w-full sm:w-auto px-4 py-2 rounded-full border border-[#0065A4] text-[#0065A4] font-medium hover:bg-[#0065A4] hover:text-white transition"
                 >
                   Clear cart
                 </button>
               </div>
 
-              <div className="space-y-4 bg-white backdrop-blur-sm border border-[#0065A4] rounded-xl p-6 ">
+              {/* ITEMS */}
+              <div className="space-y-4 bg-white border border-[#0065A4] rounded-xl p-4 sm:p-6">
+
                 {groupedItems.map((item, index) => {
                   const itemImage = item.images?.[0] || item.image || "/assate/home-image.webp";
                   const lineTotal = Number(item.price || 0) * item.quantity;
@@ -280,23 +284,30 @@ export default function CartPage() {
                       className="group grid grid-cols-[100px_1fr_auto] gap-6 items-center  rounded-2xl  transition-all duration-300"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
-                      {/* Product Image */}
-                      <div className="w-[100px] h-[100px] rounded-xl bg-gradient-to-br from-[#0065A6]/10 to-[#0065A6]/30 overflow-hidden shadow-md group-hover:shadow-lg transition-all">
+                      {/* IMAGE */}
+                      <div className="w-20 h-20 sm:w-24 sm:h-24  bg-linear-to-br from-[#0065A6]/10 to-[#0065A6]/30 overflow-hidden shadow-md">
                         <img
                           src={itemImage}
                           alt={item.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          width={140}
+                          height={140}
+
+                          className="w-full h-full object-cover"
                         />
                       </div>
 
-                      {/* Product Details */}
-                      <div>
-                        <h3 className="text-2xl font-semibold text-black group-hover:text-black transition-colors">
-                          {item.name}
-                        </h3>
-                        <p className="text-black text-sm mt-1 flex items-center gap-1">
-                          <Leaf className="w-3 h-3" />
-                          {item.category || "General"}
+                      {/* DETAILS */}
+                      <div className="flex flex-col gap-1 sm:pl-4">
+                        <NextImage
+                          src={ixanLogo}
+                          alt="Ixan Logo"
+                          width={231}
+                          height={64}
+                          className="w-full max-w-35 sm:max-w-18.5 md:max-w-18.5 h-auto"
+                        />
+
+                        <p className="text-black text-sm sm:text-[16px] mt-1 sm:mr-40">
+                          Pack Size: 60 Veg Capsules (2-Month Pack)
                         </p>
                         {item.packLabel && (
                           <p className="text-black text-sm mt-1">
@@ -306,8 +317,10 @@ export default function CartPage() {
                        
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex flex-col items-end gap-4">
+                      {/* ACTIONS */}
+                      <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 w-full sm:w-auto">
+
+                        {/* REMOVE */}
                         <button
                           onClick={() =>
                             dispatch(
@@ -320,13 +333,14 @@ export default function CartPage() {
                           className="text-[#000000] hover:text-red-600 transition-colors p-2 hover:bg-red-50  rounded-full"
                           aria-label={`Remove ${item.name}`}
                         >
-                          <Trash2 className="w-6 h-6" />
+                          <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
                          <p className="text-3xl font-bold text-black">
                             Rs. {formatAmount(lineTotal)}
                         </p>
 
-                        <div className="flex items-center gap-3   px-4 py-3 border border-[#C5C5C5]">
+                        {/* QUANTITY */}
+                        <div className="flex items-center gap-3 px-3 py-2 border border-[#C5C5C5] rounded-md">
                           <button
                             onClick={() => handleDecreaseQuantity(item)}
                             className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
@@ -334,9 +348,11 @@ export default function CartPage() {
                           >
                             <Minus className="w-3 h-3" />
                           </button>
+
                           <span className="text-sm font-semibold text-black min-w-6 text-center">
                             {item.quantity}
                           </span>
+
                           <button
                             onClick={() => handleIncreaseQuantity(item)}
                             className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
@@ -356,7 +372,7 @@ export default function CartPage() {
             </section>
 
             {/* Order Summary Section */}
-            <aside className="bg-white/90 py-4 px-10  h-fit sticky">
+            <aside className="bg-white py-4 px-4 sm:px-6 lg:px-10 h-fit lg:sticky lg:top-6 rounded-xl ">
 
               {/* Header */}
               <div className="flex items-center justify-between pb-5 mb-6 border-b border-[#6F6F6F]">

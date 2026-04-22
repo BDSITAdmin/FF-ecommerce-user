@@ -36,7 +36,6 @@ export const useCheckoutForm = () => {
       address: addressSchema,
       shipping: shippingSchema,
       payment: paymentSchema,
-      // No fields on review screen; reaching it already implies prior steps validated.
       review: z.object({}),
     } satisfies Record<Step, z.ZodTypeAny>;
   }, []);
@@ -55,7 +54,7 @@ export const useCheckoutForm = () => {
       city: "",
       state: "",
       zipCode: "",
-      country: "IN", // ✅ FIXED
+      country: "IN", 
       paymentMethod: "RAZORPAY",
       saveInfo: false,
     },
@@ -64,9 +63,6 @@ export const useCheckoutForm = () => {
   });
 
   const values = form.watch();
-
-  // `react-hook-form`'s `formState.isValid` reflects the *entire* resolver schema.
-  // For a multi-step form, we want "valid for the current step" so users can proceed.
   const isStepValid = useMemo(() => {
     const result = stepSchemas[currentStep].safeParse(values);
     return result.success;
@@ -197,7 +193,7 @@ export const useCheckoutForm = () => {
     },
     [dispatch, shippingAddress, isSubmitting]
   );
-
+  
   const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);
 
   return {

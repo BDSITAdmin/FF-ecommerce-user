@@ -138,7 +138,7 @@ export default function CheckoutPage() {
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
   return (
-    <main className="min-h-screen bg-white py-12 text-black">
+    <main className="min-h-screen bg-white  text-black">
       <Navbar />
       <div className="max-w-7xl mx-auto px-6">
         <Link href="/cart" className="inline-flex items-center gap-2 text-[#0065A6] hover:text-black mb-8">

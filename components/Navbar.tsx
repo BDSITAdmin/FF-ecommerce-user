@@ -5,15 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
-  Search,
-  ShoppingCart,
+ 
   ChevronDown,
   UserCircle2,
   LogOut,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { useAuth } from "../hooks/useAuth";
-import Logo from "../public/assate/Layer_1.png";
+import Logo from "../public/assate/home-logo.svg";
 import Cart from "../public/icons/cart.svg";
 
 type RootState = {
@@ -128,17 +127,17 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-green-200 bg-[#181818] text-green-800 shadow-sm">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-50 w-full border-b  bg-[#181818]  shadow-sm">
+      <div className="container mx-auto flex h-20 items-center justify-between ">
 
         {/* Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 pl-3  sm:px-0">
           <Image
             src={Logo}
             alt="E-commStore"
             width={168}
             height={42}
-            className="h-[42px] w-[168px] object-contain"
+            className="h-8 w-auto sm:h-9 md:h-10 object-contain"
             priority
           />
         </div>
@@ -191,7 +190,7 @@ export default function Header() {
             </Link>
 
             {showCartTooltip && cartTooltipData && (
-              <div className="absolute right-0 top-[calc(100%+8px)] z-[80] w-80 rounded-xl border border-[#D1FAE5] bg-white p-4 shadow-2xl">
+              <div className="absolute right-0 top-[calc(100%+8px)] z-80 w-80 rounded-xl border border-[#D1FAE5] bg-white p-4 shadow-2xl">
                 <div className="absolute -top-2 right-6 h-4 w-4 rotate-45 border-l border-t border-[#D1FAE5] bg-white" />
                 <p className="text-sm font-semibold text-[#047857]">Added to cart</p>
 
@@ -231,10 +230,10 @@ export default function Header() {
               onClick={() => setIsMenuOpen((prev) => !prev)}
               className="rounded-full px-3 py-2 cursor-pointer flex items-center gap-2"
             >
-              <span className="text-sm font-medium text-white max-w-32 truncate">
+              <span className=" text-sm sm:text-xl font-medium text-white max-w-32 truncate">
                 {userName}
               </span>
-              <ChevronDown className="h-4 w-4 text-white" />
+              <ChevronDown className="h-6 w-6 sm:h-4 sm:w-4 text-white" />
             </button>
 
             {isMenuOpen && (
@@ -288,7 +287,7 @@ export default function Header() {
 
       {/* Logout Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-70 bg-black/40 flex items-center justify-center p-4">
 
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
 

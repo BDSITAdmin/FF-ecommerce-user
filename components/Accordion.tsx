@@ -9,7 +9,9 @@ type AccordionItem = {
   answer: string;
 };
 
-export default function Accordion({ items }: Readonly<{ items: AccordionItem[] }>) {
+export default function Accordion({
+  items,
+}: Readonly<{ items: AccordionItem[] }>) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {
@@ -18,42 +20,52 @@ export default function Accordion({ items }: Readonly<{ items: AccordionItem[] }
 
   return (
     <div className="w-full">
-      {items.map((item, index) => (
-        <div key={index} className="border-b border-blue-500 py-4">
+      {items.map((item, index) => {
+        const isOpen = activeIndex === index;
 
-          {/* Question */}
-          <button
-            onClick={() => toggle(index)}
-            className="flex justify-between items-center w-full text-left"
-          >
-            <span
-              className={`${activeIndex === index ? "font-bold text-[#000000]" : "font-medium text-[#181818]"
-                }`}
+        return (
+          <div key={index} className="border-b border-[#2477DC] py-4">
+            {/* Question */}
+            <button
+              onClick={() => toggle(index)}
+              className="flex justify-between items-center w-full text-left gap-4"
             >
-              {item.question}
-            </span>
-
-            <Image
-              src={ChevronDown}
-              alt=""
-              width={18}
-              height={18}
-              className={`transition-transform duration-300 ${activeIndex === index ? "rotate-180" : ""
+              <span
+                className={`transition-all ${
+                  isOpen
+                    ? "font-semibold text-black"
+                    : "font-medium text-[#181818]"
                 }`}
-            />
-          </button>
+              >
+                {item.question}
+              </span>
 
-          {/* Answer */}
-          <div
-            className={`overflow-hidden transition-all duration-500 ${activeIndex === index ? "max-h-40 mt-3" : "max-h-0"
+              <Image
+                src={ChevronDown}
+                alt="toggle"
+                width={18}
+                height={18}
+                className={`transition-transform duration-300 ${
+                  isOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Answer */}
+            <div
+              className={`grid transition-all duration-300 ease-in-out ${
+                isOpen ? "grid-rows-[1fr] mt-3" : "grid-rows-[0fr]"
               }`}
-          >
-            <p className="text-[#181818] leading-relaxed">
-              {item.answer}
-            </p>
+            >
+              <div className="overflow-hidden">
+                <p className="text-[#181818] leading-relaxed">
+                  {item.answer}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

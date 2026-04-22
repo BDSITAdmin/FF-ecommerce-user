@@ -43,28 +43,28 @@ export default function Login() {
 
     if (!form.password) {
       newErrors.password = "Password is required";
-    } else if (form.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (form.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-const handleLogin = async () => {
-  if (!validateForm()) return;
+  const handleLogin = async () => {
+    if (!validateForm()) return;
 
-  try {
-    setErrors({});
+    try {
+      setErrors({});
 
-    await login(form);
-    router.push("/");
-  } catch {
-    setErrors({
-      general: "Invalid email or password",
-    });
-  }
-};
+      await login(form);
+      router.push("/");
+    } catch {
+      setErrors({
+        general: "Invalid email or password",
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,35 +72,39 @@ const handleLogin = async () => {
   };
 
   return (
-    <section className="bg-[#0065A4]">
-      <div className="relative min-h-screen flex">
+    <section className="bg-white sm:bg-[#0065A4]">
+  <div className="relative flex flex-col lg:flex-row sm:min-h-screen">
 
         {/* BACKGROUND IMAGE */}
         <div
-          className="absolute inset-0 bg-no-repeat bg-contain bg-center"
+          className="absolute inset-0 bg-no-repeat bg-contain bg-center lg:block hidden"
           style={{ backgroundImage: "url('/assate/login-bg.png')" }}
         />
 
         {/* LOGIN PANEL */}
-        <div className="relative w-[60%] bg-white flex items-center justify-center">
+        <div className="relative w-full lg:w-[60%] bg-white flex items-center justify-center px-4 sm:px-6 py-10">
 
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col items-center gap-6"
+            className="flex flex-col items-center gap-6 w-full"
           >
 
             {/* Logo */}
-            <div className="text-center">
-              <Image
-                src={logo}
-                alt="logo"
-                width={200}
-                height={80}
-                priority
-                className="mx-auto object-contain"
-              />
+            <div className="text-center px-4 sm:px-6">
+              {/* LOGO */}
+              <div className="mx-auto w-[120px] sm:w-[160px] md:w-[200px]">
+                <Image
+                  src={logo}
+                  alt="logo"
+                  width={200}
+                  height={80}
+                  priority
+                  className="w-full h-auto object-contain"
+                />
+              </div>
 
-              <h2 className="text-xl font-semibold mt-4 text-gray-700">
+              {/* HEADING */}
+              <h2 className="font-light mt-3 sm:mt-4 text-sm sm:text-xl md:text-[28px] text-gray-700">
                 Login to your account
               </h2>
             </div>
@@ -111,8 +115,8 @@ const handleLogin = async () => {
             )}
 
             {/* Email */}
-            <div className="flex flex-col gap-2">
-              <label className="font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+            <div className="flex flex-col gap-2 w-full max-w-[472px]">
+              <label className="font-semibold text-sm sm:text-[16px]">
                 Email
               </label>
 
@@ -126,9 +130,8 @@ const handleLogin = async () => {
                     setForm({ ...form, email: e.target.value })
                   }
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-[472px] h-14 pl-12 pr-4 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full h-12 sm:h-14 pl-12 pr-4 rounded-lg border border-[#7697AC] focus:ring-2 focus:ring-[#7697AC] outline-none"
                 />
-
               </div>
 
               {errors.email && (
@@ -137,9 +140,9 @@ const handleLogin = async () => {
             </div>
 
             {/* Password */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full max-w-[472px]">
 
-              <div className="flex justify-between w-[472px] font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+              <div className="flex justify-between text-sm sm:text-[16px] font-semibold">
                 <label>Password</label>
 
                 <Link
@@ -160,7 +163,7 @@ const handleLogin = async () => {
                     setForm({ ...form, password: e.target.value })
                   }
                   placeholder="********"
-                  className="w-[472px] h-14 pl-12 pr-12 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full h-12 sm:h-14 pl-12 pr-12 rounded-lg border border-[#7697AC] focus:ring-2 focus:ring-[#7697AC] outline-none"
                 />
 
                 <button
@@ -182,7 +185,7 @@ const handleLogin = async () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-[472px] h-[60px] bg-[#0065A6] text-white text-[20px] font-semibold flex items-center justify-center rounded-full hover:bg-blue-800"
+              className="w-full max-w-[472px] h-12 sm:h-[60px] bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold sm:mt-3 flex items-center justify-center rounded-full hover:bg-[#023954] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
@@ -190,14 +193,14 @@ const handleLogin = async () => {
             {/* Google Login */}
             <button
               type="button"
-              className="w-[472px] h-14 border rounded-full flex items-center justify-center gap-2"
+              className="w-full max-w-[472px] h-12 sm:h-14 border border-[#0065A6] rounded-full flex items-center justify-center gap-2"
             >
               <Image src={google} alt="google" width={24} height={24} />
               Sign in with <span className="font-semibold">Google</span>
             </button>
 
             {/* Signup */}
-            <p className="text-center font-[Figtree] font-semibold text-[16px] leading-4 tracking-[0.02em]">
+            <p className="text-center text-sm sm:text-[16px] font-semibold">
               Don’t have an account?{" "}
               <Link href="/register" className="text-[#0065A6] underline">
                 Sign up
