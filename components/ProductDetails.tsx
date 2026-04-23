@@ -34,6 +34,26 @@ type ProductDetailsProps = {
   productId?: string | number | null;
 };
 
+type ProductPackPricing = {
+  mrp?: number;
+  discount?: number;
+  subtotal?: number;
+  shipping?: number;
+  tax?: number;
+  totalSavings?: number;
+  totalToPay?: number;
+};
+
+type ProductPack = {
+  id: string;
+  productId: string;
+  label: string;
+  quantity: number;
+  isActive: boolean;
+  sortOrder?: number;
+  pricing?: ProductPackPricing;
+};
+
 const ingredients = [
   {
     heading: "Curcuminoids (60 mg)",
@@ -265,22 +285,68 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
   const dispatch = useDispatch<any>();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
+  const cartItems = useSelector((state: { cart: { items: any[] } }) => state.cart.items || []);
   const [product, setProduct] = useState<Product | null>(null);
+  const [isProductLoading, setIsProductLoading] = useState(true);
+  const [productLoadError, setProductLoadError] = useState("");
+  const [packs, setPacks] = useState<ProductPack[]>([]);
+  const [selectedPackId, setSelectedPackId] = useState<string>("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const resolvedProductId = normalizeProductId(productId);
 
   useEffect(() => {
     if (!resolvedProductId) return;
+    setIsProductLoading(true);
+    setProductLoadError("");
+
     api
       .get(`api/v1/products/${resolvedProductId}`)
       .then((res) => {
         const apiProduct = res?.data?.data?.product ?? null;
         setProduct(apiProduct);
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setProduct(null);
+        setProductLoadError("Unable to load product details right now.");
+      })
+      .finally(() => setIsProductLoading(false));
   }, [resolvedProductId]);
+
+  useEffect(() => {
+    if (!resolvedProductId) return;
+
+    api
+      .get(`/api/v1/products/${resolvedProductId}/packs`)
+      .then((res) => {
+        const apiPacks = (res?.data?.data?.packs ?? []) as ProductPack[];
+        const activePacks = apiPacks
+          .filter((pack) => pack?.isActive !== false)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        setPacks(activePacks);
+        setSelectedPackId((prev) => {
+          if (prev && activePacks.some((pack) => pack.id === prev)) return prev;
+          return activePacks[0]?.id ?? "";
+        });
+      })
+      .catch(() => {
+        setPacks([]);
+        setSelectedPackId("");
+      });
+  }, [resolvedProductId]);
+
+  const selectedPack = useMemo(() => {
+    if (!packs.length) return null;
+    return packs.find((pack) => pack.id === selectedPackId) ?? packs[0] ?? null;
+  }, [packs, selectedPackId]);
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedPackId]);
 
   const galleryImages = useMemo(() => {
     if (!product) return [];
@@ -310,22 +376,79 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     setSelectedIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
   };
 
-  const handleAddToCart = () => {
+  const selectedVariantKey = useMemo(
+    () => `${String(product?.id ?? "")}::${String(selectedPack?.id || "default")}`,
+    [product?.id, selectedPack?.id]
+  );
+
+  const isSelectedVariantInCart = useMemo(() => {
+    return cartItems.some((item) => {
+      const itemKey = `${String(item?.id ?? "")}::${String(item?.packId || "default")}`;
+      return itemKey === selectedVariantKey;
+    });
+  }, [cartItems, selectedVariantKey]);
+
+  const handleAddToCart = async () => {
     if (!product) return;
+
+    if (isSelectedVariantInCart) {
+      router.push("/cart");
+      return;
+    }
+
     if (!user) {
       router.push("/login");
       return;
     }
-    for (let i = 0; i < quantity; i += 1) {
-      dispatch((addToCartAsync as any)({ product, quantity: 1 }));
+
+    const selectedPackQuantity = Math.max(1, Number(selectedPack?.quantity || 1));
+    const selectedPackMrp = Number(selectedPack?.pricing?.mrp ?? product.price ?? 0);
+
+    const productForCart = {
+      ...product,
+      price: selectedPackMrp,
+      packId: selectedPack?.id,
+      packLabel: selectedPack?.label,
+      packSize: selectedPackQuantity,
+      packQuantity: selectedPackQuantity,
+      packMrp: selectedPackMrp,
+    };
+
+    setIsAddingToCart(true);
+    try {
+      const action = await dispatch((addToCartAsync as any)({ product: productForCart, quantity }));
+      if (action?.meta?.requestStatus === "fulfilled") {
+        const detail = {
+          name: productForCart.name,
+          image: productForCart.images?.[0] || productForCart.image || "",
+          packLabel: productForCart.packLabel || `${selectedPackQuantity} units`,
+          quantity,
+          units: totalUnits,
+          price: selectedPackMrp,
+          lineTotal: selectedPackMrp * quantity,
+        };
+        globalThis.window?.dispatchEvent(new CustomEvent("cart:item-added", { detail }));
+      }
+    } finally {
+      setIsAddingToCart(false);
     }
   };
+
+  const selectedPackQuantity = Math.max(1, Number(selectedPack?.quantity || 1));
+  const displayPrice = Number(selectedPack?.pricing?.mrp ?? product?.price ?? 0);
+  const totalUnits = quantity * selectedPackQuantity;
 
   if (!resolvedProductId) {
     return <div className="p-10">Loading...</div>;
   }
 
-  if (!product) return <div className="p-10">Loading...</div>;
+  if (isProductLoading) {
+    return <div className="p-10">Loading...</div>;
+  }
+
+  if (!product) {
+    return <div className="p-10">{productLoadError || "Product not found."}</div>;
+  }
 
   return (
     <div className="font-figtree ">
@@ -338,7 +461,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
           {/* MAIN IMAGE */}
           <img
-            src={galleryImages[selectedIndex] || "https://via.placeholder.com/400"}
+            src={galleryImages[selectedIndex] || IxanBottle.src}
             alt={product.name}
             className="w-full max-w-md mx-auto lg:max-w-full object-contain"
           />
@@ -362,8 +485,12 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   {galleryImages.map((img, index) => (
                     <button
                       key={index}
+                      ref={(el) => {
+                        thumbnailRefs.current[index] = el;
+                      }}
+                      type="button"
                       onClick={() => setSelectedIndex(index)}
-                      className={`rounded border-2 flex-shrink-0 ${selectedIndex === index
+                      className={`rounded border-2 shrink-0 ${selectedIndex === index
                         ? "border-[#2477DC]"
                         : "border-transparent"
                         }`}
@@ -414,7 +541,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           <img
             src={IxanLogo.src}
             alt="Ixan Logo"
-            className="w-[140px] sm:w-[180px] md:w-[220px] lg:w-[231px] h-auto mb-2"
+            className="w-35 sm:w-45 md:w-55 lg:w-57.75 h-auto mb-2"
           />
 
           <h3 className="text-sm sm:text-2xl font-bold mt-2 mb-4">
@@ -431,49 +558,94 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             {product.description || "No description available"}
           </p>
           <div className=" sm:mt-14 mb-4">
-            <p className="text-2xl  font-figtree font-semibold sm:text-[36px] leading-[36px] tracking-normal">
-              Rs. {product.price}/-
+            <p className="text-2xl  font-figtree font-semibold sm:text-[36px] leading-9 tracking-normal">
+              Rs. {displayPrice}/-
             </p>
 
             <p className="text-[#181818] text-sm sm:text-xl font-normal mt-3 ">
-              Pack Size: 60 Veg Capsules (2-Month Pack)
+              {selectedPack
+                ? `${selectedPack.label} (${selectedPack.quantity} units)`
+                : "Pack Size: 60 Veg Capsules (2-Month Pack)"}
             </p>
-          </div>
 
-          {/* QUANTITY + BUTTON */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:mt-16 ">
+            {/* <p className=" text-[36px] font-semibold ">Rs. {displayPrice}/-</p>
+            <p className="text-gray-600 mb-4">
+              {selectedPack
+                ? `${selectedPack.label} (${selectedPack.quantity} units)`
+                : "Pack Size: 60 Veg Capsules (2-Month Pack)"}
+            </p> */}
 
-            {/* QUANTITY */}
-            <div className="inline-flex items-center border border-[#C5C5C5] sm:px-5 sm:py-2 ">
+            {packs.length > 0 && (
+              <div className="mb-8">
+                <p className="mb-3 text-sm font-semibold text-gray-700">Select Pack Size</p>
+                <div className="flex flex-wrap gap-3">
+                  {packs.map((pack) => {
+                    const packMrp = Number(pack.pricing?.mrp ?? 0);
+                    const isSelected = selectedPack?.id === pack.id;
+                    return (
+                      <button
+                        key={pack.id}
+                        type="button"
+                        onClick={() => setSelectedPackId(pack.id)}
+                        className={`rounded-lg border px-4 py-3 text-left transition ${isSelected
+                          ? "border-[#0065A6] bg-[#0065A6]/10"
+                          : "border-[#C5C5C5] hover:border-[#0065A6]/50"
+                          }`}
+                      >
+                        <p className="text-sm font-semibold text-gray-900">{pack.label}</p>
+                        <p className="text-xs text-gray-600">Qty: {pack.quantity}</p>
+                        <p className="text-sm font-bold text-[#0065A6]">Rs. {packMrp}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* QUANTITY + BUTTON */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:mt-16 ">
+
+              {/* QUANTITY */}
+              <div className="inline-flex items-center rounded-md border border-[#C5C5C5]">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
+                  className="h-10 w-10 text-lg hover:bg-gray-100"
+                >
+                  -
+                </button>
+
+                <span className="w-10 text-center font-semibold">
+                  {quantity}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setQuantity((prev) => prev + 1)}
+                  className="h-10 w-10 text-lg hover:bg-gray-100"
+                >
+                  +
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-600">
+                {quantity} pack(s) x {selectedPackQuantity} units = {totalUnits} units
+              </p>
+
               <button
-                onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
-                className="h-10 w-10 text-lg hover:bg-gray-100"
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isAddingToCart}
+                className="rounded-full bg-[#0065A6] min-w-56 px-9 py-4 font-medium text-white disabled:opacity-70"
               >
-                -
+                {isAddingToCart ? "Adding..." : isSelectedVariantInCart ? "Go to Cart" : "Add to Cart"}
               </button>
 
-              <span className="w-10 text-center font-semibold">
-                {quantity}
-              </span>
 
-              <button
-                onClick={() => setQuantity((prev) => prev + 1)}
-                className="h-10 w-10 text-lg hover:bg-gray-100"
-              >
-                +
-              </button>
+
             </div>
 
-            {/* ADD TO CART */}
-            <button
-              onClick={handleAddToCart}
-              className="w-full sm:w-auto px-5 py-4 sm:px-24 sm:py-5  font-semibold sm:text-[20px] leading-[20px] tracking-normal rounded-full bg-[#0065A6] text-white font-medium hover:opacity-90 transition"
-            >
-              Add to Cart
-            </button>
-
           </div>
-
         </div>
       </div>
 
@@ -513,11 +685,11 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
               {/* IMAGE SECTION */}
               <div className="flex justify-center">
-                <div className="bg-[#0065A6] rounded-full  w-52 h-52 sm:w-64 sm:h-64  md:w-80 md:h-80 lg:w-[420px] lg:h-[420px] flex items-center justify-center">
+                <div className="bg-[#0065A6] rounded-full  w-52 h-52 sm:w-64 sm:h-64  md:w-80 md:h-80 lg:w-105 lg:h-105 flex items-center justify-center">
                   <Image
                     src={IxanBottle}
                     alt="product image"
-                    className="object-contain  w-40 sm:w-48 md:w-60 lg:w-[360px] mt-6 sm:mt-10 lg:mt-16"
+                    className="object-contain  w-40 sm:w-48 md:w-60 lg:w-90 mt-6 sm:mt-10 lg:mt-16"
                   />
                 </div>
               </div>
@@ -646,11 +818,11 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                     Why This Combination Works
                   </h2>
 
-                  <p className="font-figtree font-normal text-base leading-6 tracking-normal sm:text-base leading-relaxed mb-4">
+                  <p className="font-figtree font-normal text-base  tracking-normal sm:text-base leading-relaxed mb-4">
                     Each ingredient is powerful alone, but in ixan+ they form a synergistic antioxidant & anti-inflammatory matrix that protects:
                   </p>
 
-                  <ul className="list-disc pl-5 font-figtree font-normal text-base leading-6 tracking-normal sm:text-base leading-relaxed space-y-1">
+                  <ul className="list-disc pl-5 font-figtree font-normal text-base  tracking-normal sm:text-base leading-relaxed space-y-1">
                     <li>Vision clarity</li>
                     <li>Retinal microvascular health</li>
                     <li>Macular pigment density</li>
@@ -832,7 +1004,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                     </p>
 
                     {/* NAME */}
-                    <p className="text-sm lg:text-[18px] opacity-90 font-normal sm:text-[20px] leading-[28px] tracking-normal">
+                    <p className="text-sm lg:text-[18px] opacity-90 font-normal sm:text-[20px] leading-7 tracking-normal">
                       — {testimonial.name}, {testimonial.city}
                     </p>
 
@@ -845,6 +1017,9 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           </div>
         </div>
       </div>
+
     </div>
-  );
+
+
+      );
 }

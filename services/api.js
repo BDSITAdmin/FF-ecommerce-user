@@ -3,8 +3,12 @@ import axios from "axios";
 const BASE_URL = "http://localhost:3000";
 //const BASE_URL = "https://ff-ecommerce-production.up.railway.app";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://ff-ecommerce-production.up.railway.app";
+
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   withCredentials: true,
 });
 
@@ -114,8 +118,8 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const res = await axios.post(
-          `${BASE_URL}/api/v1/auth/refresh`,
+        await axios.post(
+          `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );

@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, Truck, Leaf, ShoppingCart } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  addToCartAsync,
   clearCartAsync,
   fetchCart,
   removeFromCartAsync,
-  removeSingleFromCartAsync,
+  setCartItemQuantityAsync,
 } from "../../store/cartSlice";
 import Navbar from "../../components/Navbar";
 import { store } from "../../store/store";
@@ -24,11 +23,25 @@ type CartItem = {
   category?: string;
   images?: string[];
   image?: string;
+  packId?: string;
+  packSize?: number;
+  packLabel?: string;
+  packQuantity?: number;
+  packMrp?: number;
 };
 
 type RootState = {
   cart: {
     items: CartItem[];
+    pricing?: {
+      mrp?: number;
+      discount?: number;
+      tax?: number;
+      deliveryFee?: number;
+      youAreSaving?: number;
+      totalAmount?: number;
+    };
+    totalAmount?: number;
   };
   user: {
     user: unknown;
@@ -40,6 +53,8 @@ export default function CartPage() {
   type AppDispatch = typeof store.dispatch;
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useSelector((state: RootState) => state.cart.items);
+  const cartPricing = useSelector((state: RootState) => state.cart.pricing);
+  const cartTotalAmount = useSelector((state: RootState) => state.cart.totalAmount);
   const user = useSelector((state: RootState) => state.user.user);
 
   useEffect(() => {
@@ -48,31 +63,79 @@ export default function CartPage() {
     }
   }, [dispatch, user]);
 
-  const handleAddToCart = (item: CartItem) => {
+  const handleIncreaseQuantity = async (item: CartItem & { quantity: number }) => {
     if (!user) {
       router.push("/login");
       return;
     }
-    dispatch(addToCartAsync({ product: item, quantity: 1 }));
+    await dispatch(
+      setCartItemQuantityAsync({
+        product: item,
+        productId: item.id,
+        packId: item.packId,
+        packSize: item.packQuantity,
+        quantity: item.quantity + 1,
+      })
+    );
+    dispatch(fetchCart());
+  };
+
+  const handleDecreaseQuantity = async (item: CartItem & { quantity: number }) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const nextQuantity = Math.max(1, item.quantity - 1);
+    if (nextQuantity === item.quantity) return;
+
+    await dispatch(
+      setCartItemQuantityAsync({
+        product: item,
+        productId: item.id,
+        packId: item.packId,
+        packSize: item.packQuantity,
+        quantity: nextQuantity,
+      })
+    );
+    dispatch(fetchCart());
   };
 
   const groupedItems = useMemo(() => {
-    const map = new Map<string | number, CartItem & { quantity: number }>();
+    const map = new Map<string, CartItem & { quantity: number; cartKey: string }>();
     for (const item of cartItems) {
-      const existing = map.get(item.id);
+      const cartKey = `${item.id}::${item.packId || "default"}`;
+      const existing = map.get(cartKey);
       if (existing) {
         existing.quantity += 1;
       } else {
-        map.set(item.id, { ...item, quantity: 1 });
+        map.set(cartKey, { ...item, quantity: 1, cartKey });
       }
     }
     return Array.from(map.values());
   }, [cartItems]);
 
-  const subtotal = groupedItems.reduce(
+  const fallbackSubtotal = groupedItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * item.quantity,
     0
   );
+
+  const invoiceBreakdown = {
+    mrp: Number(cartPricing?.mrp || 0),
+    discount: Number(cartPricing?.discount || 0),
+    tax: Number(cartPricing?.tax || 0),
+    deliveryFee: Number(cartPricing?.deliveryFee || 0),
+    youAreSaving: Number(cartPricing?.youAreSaving || 0),
+  };
+
+  const subtotal = Number(cartTotalAmount || cartPricing?.totalAmount || fallbackSubtotal);
+
+  useEffect(() => {
+    if (globalThis.window !== undefined) {
+      sessionStorage.setItem("checkout_total_pay", String(subtotal));
+    }
+  }, [subtotal]);
+
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
 
@@ -136,16 +199,16 @@ export default function CartPage() {
               <div className="space-y-4 bg-white border border-[#0065A4] rounded-xl p-4 sm:p-6">
 
                 {groupedItems.map((item, index) => {
-                  const itemImage =
-                    item.images?.[0] || item.image || "/assate/home-image.webp";
-
+                  const itemImage = item.images?.[0] || item.image || "/assate/home-image.webp";
+                  const lineTotal = Number(item.price || 0) * item.quantity;
                   return (
                     <div
-                      key={item.id}
-                      className="group grid grid-cols-1 sm:grid-cols-[80px_1fr_auto] gap-4 sm:gap-6 items-start sm:items-center"
+                      key={item.cartKey}
+                      className="group grid grid-cols-[100px_1fr_auto] gap-6 items-center  rounded-2xl  transition-all duration-300"
+                      style={{ animationDelay: `${index * 100}ms` }}
                     >
                       {/* IMAGE */}
-                      <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px]  bg-gradient-to-br from-[#0065A6]/10 to-[#0065A6]/30 overflow-hidden shadow-md">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24  bg-linear-to-br from-[#0065A6]/10 to-[#0065A6]/30 overflow-hidden shadow-md">
                         <img
                           src={itemImage}
                           alt={item.name}
@@ -158,17 +221,23 @@ export default function CartPage() {
 
                       {/* DETAILS */}
                       <div className="flex flex-col gap-1 sm:pl-4">
-                        <Image
+                        <NextImage
                           src={ixanLogo}
                           alt="Ixan Logo"
                           width={231}
                           height={64}
-                          className="w-full max-w-[140px] sm:max-w-[74px] md:max-w-[74px] h-auto"
+                          className="w-full max-w-35 sm:max-w-18.5 md:max-w-18.5 h-auto"
                         />
 
                         <p className="text-black text-sm sm:text-[16px] mt-1 sm:mr-40">
                           Pack Size: 60 Veg Capsules (2-Month Pack)
                         </p>
+                        {item.packLabel && (
+                          <p className="text-black text-sm mt-1">
+                            {item.packLabel} ({item.packQuantity || 1} units per pack)
+                          </p>
+                        )}
+                       
                       </div>
 
                       {/* ACTIONS */}
@@ -176,22 +245,29 @@ export default function CartPage() {
 
                         {/* REMOVE */}
                         <button
-                          onClick={() => dispatch(removeFromCartAsync(item.id))}
-                          className="text-black hover:text-red-600 p-2 rounded-full hover:bg-red-50"
+                          onClick={() =>
+                            dispatch(
+                              removeFromCartAsync({
+                                productId: item.id,
+                                packId: item.packId,
+                              })
+                            )
+                          }
+                          className="text-[#000000] hover:text-red-600 transition-colors p-2 hover:bg-red-50  rounded-full"
+                          aria-label={`Remove ${item.name}`}
                         >
                           <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
-
-                        {/* PRICE */}
-                        <p className="text-xl   text-black font-semibold sm:text-[28px] leading-[36px] tracking-normal">
-                          Rs. {formatAmount(Number(item.price))} /-
+                         <p className="text-3xl font-bold text-black">
+                            Rs. {formatAmount(lineTotal)}
                         </p>
 
                         {/* QUANTITY */}
                         <div className="flex items-center gap-3 px-3 py-2 border border-[#C5C5C5] rounded-md">
                           <button
-                            onClick={() => dispatch(removeSingleFromCartAsync(item.id))}
-                            className="w-8 h-8 flex items-center justify-center"
+                            onClick={() => handleDecreaseQuantity(item)}
+                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
+                            aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -201,12 +277,16 @@ export default function CartPage() {
                           </span>
 
                           <button
-                            onClick={() => handleAddToCart(item)}
-                            className="w-8 h-8 flex items-center justify-center"
+                            onClick={() => handleIncreaseQuantity(item)}
+                            className="w-8 h-8 rounded-full bg-white text-black hover:bg-[#0065A6] hover:text-white transition-all flex items-center justify-center shadow-sm"
+                            aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
+                        <p className="text-xs text-gray-600">
+                          {item.quantity} pack(s) x {item.packQuantity || 1} units
+                        </p>
                       </div>
                     </div>
                   );
@@ -232,9 +312,23 @@ export default function CartPage() {
               <div className="space-y-5 pb-6 border-b border-[#6F6F6F]">
 
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Subtotal</span>
+                  <span className="text-gray-700">MRP</span>
                   <span className="font-semibold text-black text-lg">
-                    Rs. {formatAmount(subtotal)}
+                    Rs. {formatAmount(invoiceBreakdown.mrp || subtotal)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Discount</span>
+                  <span className="font-semibold text-[#0065A6]">
+                    - Rs. {formatAmount(invoiceBreakdown.discount || 0)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Tax</span>
+                  <span className="font-semibold text-black text-lg">
+                    Rs. {formatAmount(invoiceBreakdown.tax || 0)}
                   </span>
                 </div>
 
@@ -244,11 +338,23 @@ export default function CartPage() {
                     <Truck className="w-4 h-4 text-[#0065A6]" />
                   </span>
 
-                  <span className="font-semibold text-[#0065A6]">
-                    Free
+                  <span className="font-semibold text-black text-lg">
+                    Rs. {formatAmount(invoiceBreakdown.deliveryFee || 0)}
                   </span>
                 </div>
 
+              </div>
+
+              <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-700">You are saving</span>
+                  <span className="text-xl font-extrabold text-green-700">
+                    Rs. {formatAmount(invoiceBreakdown.youAreSaving || invoiceBreakdown.discount || 0)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-green-700/90">
+                  Great deal. Your discount and offers are already applied.
+                </p>
               </div>
 
               {/* Total */}

@@ -16,6 +16,7 @@ export const checkout = (data: {
     zipCode: string;
   };
   paymentMethod: "RAZORPAY" | "COD";
+  totalPay?: number;
 }) => {
   return api.post("/api/v1/checkout", data);
 };

@@ -5,11 +5,37 @@ export declare const addToCartAsync: (arg: {
   quantity?: number;
 }) => any;
 
+export declare const setCartItemQuantityAsync: (arg: {
+  product?: unknown;
+  productId?: string | number;
+  packId?: string;
+  packSize?: number;
+  quantity: number;
+}) => any;
+
 export declare const clearCartAsync: () => any;
 
-export declare const removeFromCartAsync: (productId: string | number) => any;
+export declare const removeFromCartAsync: (
+  payload:
+    | string
+    | number
+    | {
+        productId: string | number;
+        packId?: string;
+        packSize?: number;
+      }
+) => any;
 
-export declare const removeSingleFromCartAsync: (productId: string | number) => any;
+export declare const removeSingleFromCartAsync: (
+  payload:
+    | string
+    | number
+    | {
+        productId: string | number;
+        packId?: string;
+        packSize?: number;
+      }
+) => any;
 
 export declare const addToCart: any;
 export declare const removeSingleFromCart: any;
