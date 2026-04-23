@@ -593,7 +593,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                           }`}
                       >
                         <p className="text-sm font-semibold text-gray-900">{pack.label}</p>
-                        <p className="text-xs text-gray-600">Qty: {pack.quantity}</p>
+                        {/* <p className="text-xs text-gray-600">Qty: {pack.quantity}</p> */}
                         <p className="text-sm font-bold text-[#0065A6]">Rs. {packMrp}</p>
                       </button>
                     );

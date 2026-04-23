@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BASE_URL = "http://localhost:3000";
-//const BASE_URL = "https://ff-ecommerce-production.up.railway.app";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || BASE_URL;
 
 
 const api = axios.create({
@@ -28,7 +28,7 @@ const onRefreshed = (token) => {
     FORCE LOGOUT (FIXED - NO LOOP)
 ====================================================== */
 const forceLogout = async () => {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
   try {
     await axios.post(
@@ -45,8 +45,8 @@ const forceLogout = async () => {
   sessionStorage.clear();
 
   //  Prevent infinite loop
-  if (window.location.pathname !== "/login") {
-    window.location.replace("/login");
+  if (globalThis.window.location.pathname !== "/login") {
+    globalThis.window.location.replace("/login");
   }
 };
 
@@ -67,7 +67,7 @@ const isAuthRoute = (url = "") => {
 ====================================================== */
 api.interceptors.request.use(
   (config) => {
-    if (typeof window === "undefined") return config;
+    if (globalThis.window === undefined) return config;
 
     const token = localStorage.getItem("token");
 
@@ -90,8 +90,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
     //  Stop everything if already on login page
-    if (typeof window !== "undefined" && window.location.pathname === "/login") {
+    if (globalThis.window?.location?.pathname === "/login") {
       return Promise.reject(error);
     }
 
@@ -105,6 +109,7 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribeTokenRefresh((token) => {
+            originalRequest.headers = originalRequest.headers || {};
             originalRequest.headers.Authorization = `Bearer ${token}`;
             resolve(api(originalRequest));
           });
@@ -115,13 +120,13 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.post(
+        const res = await axios.post(
           `${API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );
 
-        const newToken = res.data?.accessToken;
+        const newToken = res.data?.data?.accessToken || res.data?.accessToken;
 
         if (!newToken) throw new Error("No access token returned");
 
@@ -133,11 +138,11 @@ api.interceptors.response.use(
         isRefreshing = false;
 
         //  Retry original request
+        originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-
 
         await forceLogout();
 
