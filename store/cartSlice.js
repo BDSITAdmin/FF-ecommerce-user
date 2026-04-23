@@ -68,6 +68,19 @@ const extractCartItems = (res) => {
   );
 };
 
+const extractCartPricing = (res) => {
+  const data = res?.data?.data ?? res?.data ?? null;
+  const pricing = data?.pricing ?? {};
+  return {
+    mrp: Number(pricing?.mrp || 0),
+    discount: Number(pricing?.discount || 0),
+    tax: Number(pricing?.tax || 0),
+    deliveryFee: Number(pricing?.deliveryFee || 0),
+    youAreSaving: Number(pricing?.youAreSaving || 0),
+    totalAmount: Number(pricing?.totalAmount || data?.totalAmount || 0),
+  };
+};
+
 // Keep the existing UI behavior: `state.cart.items.length` equals total quantity.
 const expandItemsByQuantity = (apiItems) => {
   if (!Array.isArray(apiItems)) return [];
@@ -114,7 +127,12 @@ const expandItemsByQuantity = (apiItems) => {
 
 export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
   const res = await getCart();
-  return expandItemsByQuantity(extractCartItems(res));
+  const pricing = extractCartPricing(res);
+  return {
+    items: expandItemsByQuantity(extractCartItems(res)),
+    pricing,
+    totalAmount: Number(pricing?.totalAmount || 0),
+  };
 });
 
 export const addToCartAsync = createAsyncThunk(
@@ -209,6 +227,15 @@ const cartSlice = createSlice({
   name: "cart",
   initialState: {
     items: [],
+    pricing: {
+      mrp: 0,
+      discount: 0,
+      tax: 0,
+      deliveryFee: 0,
+      youAreSaving: 0,
+      totalAmount: 0,
+    },
+    totalAmount: 0,
     status: "idle",
     error: null,
   },
@@ -238,7 +265,9 @@ const cartSlice = createSlice({
       })
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.items = action.payload;
+        state.items = action.payload?.items || [];
+        state.pricing = action.payload?.pricing || state.pricing;
+        state.totalAmount = Number(action.payload?.totalAmount || 0);
       })
       .addCase(fetchCart.rejected, (state, action) => {
         state.status = "failed";
@@ -288,6 +317,15 @@ const cartSlice = createSlice({
       })
       .addCase(clearCartAsync.fulfilled, (state) => {
         state.items = [];
+        state.pricing = {
+          mrp: 0,
+          discount: 0,
+          tax: 0,
+          deliveryFee: 0,
+          youAreSaving: 0,
+          totalAmount: 0,
+        };
+        state.totalAmount = 0;
       })
       .addCase(removeFromCartAsync.pending, (state) => {
         state.error = null;

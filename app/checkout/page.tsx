@@ -289,12 +289,13 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">Discount</span>
-                <span className="font-semibold text-green-700">- Rs. {formatAmount(invoiceBreakdown.discount || 0)}</span>
+                <span className="font-semibold text-[#0065A6]">- Rs. {formatAmount(invoiceBreakdown.discount || 0)}</span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-gray-700">
-                  Tax <span className="text-[#16A34A]">(Free)</span>
+                  Tax
+                   {/* <span className="text-[#0065A6]">(Free)</span> */}
                 </span>
                 <span className="text-right">
                   <span className="font-semibold text-[#0065A6]">Free</span>
@@ -305,7 +306,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-700 flex items-center gap-2">
                   Delivery Fee
-                  <span className="text-[#16A34A]">(Free)</span>
+                  {/* <span className="text-[#0065A6]">(Free)</span> */}
                   <Truck className="w-4 h-4 text-[#0065A6]" />
                 </span>
                 <span className="text-right">

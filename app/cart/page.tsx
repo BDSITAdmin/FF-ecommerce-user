@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,6 @@ import {
   setCartItemQuantityAsync,
 } from "../../store/cartSlice";
 import Navbar from "../../components/Navbar";
-import api from "../../services/api";
 import { store } from "../../store/store";
 import ixanLogo from "../../public/assate/ixan-logo.svg";
 
@@ -34,6 +33,15 @@ type CartItem = {
 type RootState = {
   cart: {
     items: CartItem[];
+    pricing?: {
+      mrp?: number;
+      discount?: number;
+      tax?: number;
+      deliveryFee?: number;
+      youAreSaving?: number;
+      totalAmount?: number;
+    };
+    totalAmount?: number;
   };
   user: {
     user: unknown;
@@ -45,6 +53,8 @@ export default function CartPage() {
   type AppDispatch = typeof store.dispatch;
   const dispatch = useDispatch<AppDispatch>();
   const cartItems = useSelector((state: RootState) => state.cart.items);
+  const cartPricing = useSelector((state: RootState) => state.cart.pricing);
+  const cartTotalAmount = useSelector((state: RootState) => state.cart.totalAmount);
   const user = useSelector((state: RootState) => state.user.user);
 
   useEffect(() => {
@@ -53,12 +63,12 @@ export default function CartPage() {
     }
   }, [dispatch, user]);
 
-  const handleIncreaseQuantity = (item: CartItem & { quantity: number }) => {
+  const handleIncreaseQuantity = async (item: CartItem & { quantity: number }) => {
     if (!user) {
       router.push("/login");
       return;
     }
-    dispatch(
+    await dispatch(
       setCartItemQuantityAsync({
         product: item,
         productId: item.id,
@@ -67,9 +77,10 @@ export default function CartPage() {
         quantity: item.quantity + 1,
       })
     );
+    dispatch(fetchCart());
   };
 
-  const handleDecreaseQuantity = (item: CartItem & { quantity: number }) => {
+  const handleDecreaseQuantity = async (item: CartItem & { quantity: number }) => {
     if (!user) {
       router.push("/login");
       return;
@@ -78,7 +89,7 @@ export default function CartPage() {
     const nextQuantity = Math.max(1, item.quantity - 1);
     if (nextQuantity === item.quantity) return;
 
-    dispatch(
+    await dispatch(
       setCartItemQuantityAsync({
         product: item,
         productId: item.id,
@@ -87,6 +98,7 @@ export default function CartPage() {
         quantity: nextQuantity,
       })
     );
+    dispatch(fetchCart());
   };
 
   const groupedItems = useMemo(() => {
@@ -103,116 +115,27 @@ export default function CartPage() {
     return Array.from(map.values());
   }, [cartItems]);
 
-  const [invoiceTotal, setInvoiceTotal] = useState<number>(0);
-  const [invoiceBreakdown, setInvoiceBreakdown] = useState({
-    mrp: 0,
-    discount: 0,
-    totalSavings: 0,
-    shipping: 0,
-    tax: 0,
-    totalToPay: 0,
-  });
-
   const fallbackSubtotal = groupedItems.reduce(
     (sum, item) => sum + Number(item.price || 0) * item.quantity,
     0
   );
 
+  const invoiceBreakdown = {
+    mrp: Number(cartPricing?.mrp || 0),
+    discount: Number(cartPricing?.discount || 0),
+    tax: Number(cartPricing?.tax || 0),
+    deliveryFee: Number(cartPricing?.deliveryFee || 0),
+    youAreSaving: Number(cartPricing?.youAreSaving || 0),
+  };
+
+  const subtotal = Number(cartTotalAmount || cartPricing?.totalAmount || fallbackSubtotal);
+
   useEffect(() => {
-    if (!groupedItems.length) {
-      setInvoiceTotal(0);
-      setInvoiceBreakdown({
-        mrp: 0,
-        discount: 0,
-        totalSavings: 0,
-        shipping: 0,
-        tax: 0,
-        totalToPay: 0,
-      });
-      if (globalThis.window !== undefined) {
-        sessionStorage.setItem("checkout_total_pay", "0");
-      }
-      return;
+    if (globalThis.window !== undefined) {
+      sessionStorage.setItem("checkout_total_pay", String(subtotal));
     }
+  }, [subtotal]);
 
-    let cancelled = false;
-
-    const loadInvoiceTotal = async () => {
-      const totals = await Promise.all(
-        groupedItems.map(async (item) => {
-          const packQuantity = Math.max(1, Number(item.packQuantity || item.packSize || 1));
-          const qty = Math.max(1, Number(item.quantity || 1));
-
-          try {
-            const res = await api.get(`/api/v1/products/${item.id}/packs`, {
-              params: { quantity: packQuantity },
-            });
-
-            const pack = res?.data?.data?.packs?.[0];
-            const totalToPay = Number(pack?.pricing?.totalToPay);
-            const mrp = Number(pack?.pricing?.mrp || 0);
-            const discount = Number(pack?.pricing?.discount || 0);
-            const totalSavings = Number(pack?.pricing?.totalSavings || 0);
-            const shipping = Number(pack?.pricing?.shipping || 0);
-            const tax = Number(pack?.pricing?.tax || 0);
-
-            if (Number.isFinite(totalToPay) && totalToPay > 0) {
-              return {
-                mrp: mrp * qty,
-                discount: discount * qty,
-                totalSavings: totalSavings * qty,
-                shipping: shipping * qty,
-                tax: tax * qty,
-                totalToPay: totalToPay * qty,
-              };
-            }
-          } catch {
-            // Fallback to cart line pricing when pack pricing API is unavailable.
-          }
-
-          const fallbackTotal = Number(item.price || 0) * qty;
-          return {
-            mrp: fallbackTotal,
-            discount: 0,
-            totalSavings: 0,
-            shipping: 0,
-            tax: 0,
-            totalToPay: fallbackTotal,
-          };
-        })
-      );
-
-      if (cancelled) return;
-
-      const computedBreakdown = totals.reduce(
-        (acc, row) => ({
-          mrp: acc.mrp + Number(row?.mrp || 0),
-          discount: acc.discount + Number(row?.discount || 0),
-          totalSavings: acc.totalSavings + Number(row?.totalSavings || 0),
-          shipping: acc.shipping + Number(row?.shipping || 0),
-          tax: acc.tax + Number(row?.tax || 0),
-          totalToPay: acc.totalToPay + Number(row?.totalToPay || 0),
-        }),
-        { mrp: 0, discount: 0, totalSavings: 0, shipping: 0, tax: 0, totalToPay: 0 }
-      );
-
-      const computedTotal = computedBreakdown.totalToPay;
-      setInvoiceTotal(computedTotal);
-      setInvoiceBreakdown(computedBreakdown);
-
-      if (globalThis.window !== undefined) {
-        sessionStorage.setItem("checkout_total_pay", String(computedTotal));
-      }
-    };
-
-    loadInvoiceTotal();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [groupedItems]);
-
-  const subtotal = invoiceTotal || fallbackSubtotal;
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
 
 
@@ -389,7 +312,7 @@ export default function CartPage() {
               <div className="space-y-5 pb-6 border-b border-[#6F6F6F]">
 
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Total MRP</span>
+                  <span className="text-gray-700">MRP</span>
                   <span className="font-semibold text-black text-lg">
                     Rs. {formatAmount(invoiceBreakdown.mrp || subtotal)}
                   </span>
@@ -397,35 +320,26 @@ export default function CartPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700">Discount</span>
-                  <span className="font-semibold text-green-700">
+                  <span className="font-semibold text-[#0065A6]">
                     - Rs. {formatAmount(invoiceBreakdown.discount || 0)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">
-                    Tax <span className="text-[#16A34A]">(Free)</span>
-                  </span>
-                  <span className="text-right">
-                    <span className="font-semibold text-[#0065A6]">Free</span>
-                    <span className="ml-2 text-sm text-gray-500">
-                      Rs. {formatAmount(invoiceBreakdown.tax || 0)}
-                    </span>
+                  <span className="text-gray-700">Tax</span>
+                  <span className="font-semibold text-black text-lg">
+                    Rs. {formatAmount(invoiceBreakdown.tax || 0)}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 flex items-center gap-2">
                     Delivery Fee
-                    <span className="text-[#16A34A]">(Free)</span>
                     <Truck className="w-4 h-4 text-[#0065A6]" />
                   </span>
 
-                  <span className="text-right">
-                    <span className="font-semibold text-[#0065A6]">Free</span>
-                    <span className="ml-2 text-sm text-gray-500">
-                      Rs. {formatAmount(invoiceBreakdown.shipping || 0)}
-                    </span>
+                  <span className="font-semibold text-black text-lg">
+                    Rs. {formatAmount(invoiceBreakdown.deliveryFee || 0)}
                   </span>
                 </div>
 
@@ -435,7 +349,7 @@ export default function CartPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-green-700">You are saving</span>
                   <span className="text-xl font-extrabold text-green-700">
-                    Rs. {formatAmount(invoiceBreakdown.totalSavings || invoiceBreakdown.discount || 0)}
+                    Rs. {formatAmount(invoiceBreakdown.youAreSaving || invoiceBreakdown.discount || 0)}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-green-700/90">
