@@ -1,5 +1,13 @@
 import OrderSuccess from "./OrderSuccess";
 
-export default function Page({ searchParams }: { searchParams: { orderId?: string } }) {
-  return <OrderSuccess orderId={searchParams.orderId || ""} />;
+type SearchParams = { orderId?: string };
+
+export default async function Page({
+  searchParams,
+}: Readonly<{
+  searchParams: SearchParams | Promise<SearchParams>;
+}>) {
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+
+  return <OrderSuccess orderId={resolvedSearchParams?.orderId || ""} />;
 }

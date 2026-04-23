@@ -6,7 +6,7 @@ import Link from "next/link";
 import logo from "@/public/assate/Layer_1 (1).svg";
 import api from "../../services/api";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, Loader2, User } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Loader2, User, Check, X } from "lucide-react";
 
 type RegisterForm = {
   firstName: string;
@@ -44,21 +44,47 @@ export default function Register() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    if (!form.firstName.trim()) newErrors.firstName = "First name is required";
-    if (!form.lastName.trim()) newErrors.lastName = "Last name is required";
+    // First Name Validation
+    if (!form.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+    } else if (form.firstName.trim().length < 2) {
+      newErrors.firstName = "First name must be at least 2 characters";
+    } else if (!/^[a-zA-Z\s'-]+$/.test(form.firstName.trim())) {
+      newErrors.firstName = "First name can only contain letters, spaces, hyphens, and apostrophes";
+    }
 
+    // Last Name Validation
+    if (!form.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+    } else if (form.lastName.trim().length < 2) {
+      newErrors.lastName = "Last name must be at least 2 characters";
+    } else if (!/^[a-zA-Z\s'-]+$/.test(form.lastName.trim())) {
+      newErrors.lastName = "Last name can only contain letters, spaces, hyphens, and apostrophes";
+    }
+
+    // Email Validation
     if (!form.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       newErrors.email = "Please enter a valid email address";
     }
 
+    // Password Validation (must match backend requirements)
     if (!form.password) {
       newErrors.password = "Password is required";
     } else if (form.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(form.password)) {
+      newErrors.password = "Password must contain at least one uppercase letter";
+    } else if (!/[a-z]/.test(form.password)) {
+      newErrors.password = "Password must contain at least one lowercase letter";
+    } else if (!/[0-9]/.test(form.password)) {
+      newErrors.password = "Password must contain at least one number";
+    } else if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(form.password)) {
+      newErrors.password = "Password must contain at least one special character (@, #, $, etc.)";
     }
 
+    // Confirm Password Validation
     if (!form.confirmPassword) {
       newErrors.confirmPassword = "Confirm password is required";
     } else if (form.confirmPassword !== form.password) {
@@ -280,7 +306,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full max-w-[472px] h-12 sm:h-[60px] bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold rounded-full flex items-center justify-center hover:bg-blue-800"
+              className="w-full max-w-[472px] h-12 sm:h-[60px] bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold rounded-full flex items-center justify-center course-in-out duration-300 hover:bg-[#005080] disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>

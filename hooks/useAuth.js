@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { setUser, clearUser } from "../store/userSlice";
-import { getCurrentUser, loginUser, logoutUser } from "../services/auth.service";
+import {
+  changePassword,
+  getCurrentUser,
+  loginUser,
+  loginWithGoogleUser,
+  logoutUser,
+} from "../services/auth.service";
 
 
 export const useAuth = () => {
@@ -25,71 +31,93 @@ export const useAuth = () => {
     );
   };
 
+  const finalizeAuth = async (res) => {
+    // Persist token if the API returns one (the axios instance will attach it automatically).
+    try {
+      const token =
+        res?.data?.token ??
+        res?.data?.data?.token ??
+        res?.data?.accessToken ??
+        res?.data?.data?.accessToken ??
+        res?.data?.jwt ??
+        res?.data?.data?.jwt ??
+        null;
+      if (typeof token === "string" && token) {
+        localStorage.setItem("token", token);
+      }
+    } catch { }
+
+    let currentUser =
+      res?.data?.user ??
+      res?.data?.data?.user ??
+      res?.data?.data ??
+      null;
+    if (!currentUser || !hasFirstName(currentUser)) {
+      const delays = [0, 250, 750];
+      for (const delayMs of delays) {
+        try {
+          if (delayMs) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+          const meRes = await getCurrentUser();
+          const meUser =
+            meRes?.data?.user ??
+            meRes?.data?.data?.user ??
+            meRes?.data?.data ??
+            null;
+          if (meUser) currentUser = meUser;
+          if (currentUser && hasFirstName(currentUser)) break;
+        } catch { }
+      }
+    }
+
+    if (currentUser) {
+      dispatch(setUser(currentUser));
+    }
+
+    return res;
+  };
+
+  const normalizeAuthError = (error, fallbackMessage) => {
+    const status = error?.response?.status;
+    const retryAfterHeader = error?.response?.headers?.["retry-after"];
+    const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+
+    if (status === 429) {
+      const waitSeconds = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : 60;
+      throw new Error(`Too many attempts, try again in ${waitSeconds} seconds.`);
+    }
+
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      fallbackMessage;
+    throw new Error(message);
+  };
+
   const login = async (data) => {
     setIsLoading(true);
     try {
       const res = await loginUser(data);
 
-      // Persist token if the API returns one (the axios instance will attach it automatically).
-      try {
-        const token =
-          res?.data?.token ??
-          res?.data?.data?.token ??
-          res?.data?.accessToken ??
-          res?.data?.data?.accessToken ??
-          res?.data?.jwt ??
-          res?.data?.data?.jwt ??
-          null;
-        if (typeof token === "string" && token) {
-          localStorage.setItem("token", token);
-        }
-      } catch { }
-
-      let currentUser =
-        res?.data?.user ??
-        res?.data?.data?.user ??
-        res?.data?.data ??
-        null;
-      if (!currentUser || !hasFirstName(currentUser)) {
-        const delays = [0, 250, 750];
-        for (const delayMs of delays) {
-          try {
-            if (delayMs) {
-              await new Promise((resolve) => setTimeout(resolve, delayMs));
-            }
-            const meRes = await getCurrentUser();
-            const meUser =
-              meRes?.data?.user ??
-              meRes?.data?.data?.user ??
-              meRes?.data?.data ??
-              null;
-            if (meUser) currentUser = meUser;
-            if (currentUser && hasFirstName(currentUser)) break;
-          } catch { }
-        }
-      }
-
-      if (currentUser) {
-        dispatch(setUser(currentUser));
-      }
-      return res;
+      return await finalizeAuth(res);
     } catch (error) {
-      const status = error?.response?.status;
-      const retryAfterHeader = error?.response?.headers?.["retry-after"];
-      const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+      normalizeAuthError(error, "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      if (status === 429) {
-        const waitSeconds = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-          ? retryAfterSeconds
-          : 60;
-        throw new Error(`Too many attempts, try again in ${waitSeconds} seconds.`);
-      }
+  const loginWithGoogle = async (credential) => {
+    setIsLoading(true);
+    try {
+      const res = await loginWithGoogleUser(credential);
 
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        "Login failed. Please try again.";
-      throw new Error(message);
+      return await finalizeAuth(res);
+    } catch (error) {
+      normalizeAuthError(error, "Google sign-in failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +126,7 @@ export const useAuth = () => {
   const logoutAction = async () => {
     try {
       await logoutUser(); // backend logout (cookie clear)
-    } catch (err) {
+    } catch {
       console.warn("Logout API failed, forcing logout...");
     }
 
@@ -110,8 +138,25 @@ export const useAuth = () => {
     dispatch(clearUser());
 
     // ✅ Redirect
-    window.location.replace("/login");
+    globalThis.location.replace("/login");
   };
 
-  return { login, logoutAction, isLoading };
+  const changePasswordAction = async (payload) => {
+    setIsLoading(true);
+    try {
+      return await changePassword(payload);
+    } catch (error) {
+      normalizeAuthError(error, "Password change failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return {
+    login,
+    loginWithGoogle,
+    logoutAction,
+    changePasswordAction,
+    isLoading,
+  };
 };

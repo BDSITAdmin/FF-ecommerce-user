@@ -3,6 +3,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
 
 import { clearCartAsync } from "../store/cartSlice";
 import {
@@ -25,6 +26,7 @@ const steps: Step[] = ["address", "shipping", "payment", "review"];
 
 export const useCheckoutForm = () => {
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +56,7 @@ export const useCheckoutForm = () => {
       city: "",
       state: "",
       zipCode: "",
-      country: "IN", 
+      country: "IN",
       paymentMethod: "RAZORPAY",
       saveInfo: false,
     },
@@ -91,6 +93,26 @@ export const useCheckoutForm = () => {
       zipCode,
     };
   }, [values]);
+
+  const extractOrderId = useCallback((value: unknown) => {
+    if (!value || typeof value !== "object") return "";
+
+    const record = value as Record<string, any>;
+    const data =
+      record.data && typeof record.data === "object"
+        ? (record.data as Record<string, any>)
+        : null;
+
+    return (
+      record.orderId ??
+      record.id ??
+      data?.orderId ??
+      data?.id ??
+      data?.order?.id ??
+      record.order?.id ??
+      ""
+    );
+  }, []);
 
   // ─── STEP NAVIGATION ─────────────────
 
@@ -136,14 +158,18 @@ export const useCheckoutForm = () => {
           paymentMethod: data.paymentMethod,
         });
 
+        const session = res?.data?.data || res?.data;
+        const createdOrderId = extractOrderId(session) || extractOrderId(res?.data);
+
         // ✅ COD FLOW
         if (data.paymentMethod === "COD") {
           setSubmitSuccess("Order placed successfully");
           dispatch(clearCartAsync());
+          if (createdOrderId) {
+            router.push(`/order-success?orderId=${createdOrderId}`);
+          }
           return;
         }
-
-        const session = res?.data?.data || res?.data;
 
         if (!session?.razorpayOrderId) {
           throw new Error("Invalid payment session");
@@ -167,24 +193,32 @@ export const useCheckoutForm = () => {
           });
 
         // ✅ FIXED (no spread error)
-        await verifyRazorpayPayment({
+        const verifyRes = await verifyRazorpayPayment({
           razorpay_payment_id: payment.razorpay_payment_id,
           razorpay_order_id: payment.razorpay_order_id,
           razorpay_signature: payment.razorpay_signature,
           checkoutId: session.checkoutId,
         });
 
+        const verifiedOrderId =
+          extractOrderId(verifyRes?.data) ||
+          extractOrderId(verifyRes?.data?.data) ||
+          createdOrderId;
+
         setSubmitSuccess("Payment successful ✅");
         dispatch(clearCartAsync());
+        if (verifiedOrderId) {
+          router.push(`/order-success?orderId=${verifiedOrderId}`);
+        }
       } catch (error: any) {
         setSubmitError(error?.message || "Something went wrong");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatch, shippingAddress, isSubmitting]
+    [dispatch, extractOrderId, isSubmitting, router, shippingAddress]
   );
-  
+
   const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);
 
   return {

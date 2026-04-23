@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Package, Truck, ArrowRight } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
-import api from "@/services/api";
 import Navbar from "@/components/Navbar";
 import { sendOrderConfirmation } from "@/services/checkout.service";
+import { extractOrderFromResponse, getOrderById } from "@/services/order.service";
 
-export default function OrderSuccess({ orderId }: { orderId: string }) {
+export default function OrderSuccess({ orderId }: Readonly<{ orderId: string }>) {
   const [order, setOrder] = useState<any>(null);
   const [notificationsSent, setNotificationsSent] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -21,8 +21,8 @@ export default function OrderSuccess({ orderId }: { orderId: string }) {
     const fetchOrderAndNotify = async () => {
       try {
         // Fetch order
-        const res = await api.get(`/orders/${orderId}`);
-        const orderData = res.data.data;
+        const res = await getOrderById(orderId);
+        const orderData = extractOrderFromResponse(res);
         setOrder(orderData);
 
         // Prepare contact details
@@ -84,12 +84,12 @@ export default function OrderSuccess({ orderId }: { orderId: string }) {
 
   // ✅ Success UI
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+    <div className="min-h-screen bg-linear-to-br from-green-50 to-emerald-50">
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-6 py-20 text-center">
         <div className="bg-white shadow-xl rounded-3xl p-10">
-          
+
           <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" />
 
           <h1 className="text-3xl font-bold mb-4">Order Confirmed!</h1>
@@ -114,6 +114,13 @@ export default function OrderSuccess({ orderId }: { orderId: string }) {
 
             <Link href="/orders" className="px-6 py-2 bg-green-600 text-white rounded">
               View Orders
+            </Link>
+
+            <Link
+              href={`/returns?orderId=${order.id}`}
+              className="px-6 py-2 border border-black/20 text-black rounded hover:border-black"
+            >
+              Return Order
             </Link>
           </div>
         </div>

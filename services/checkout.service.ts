@@ -1,6 +1,7 @@
 import api from "./api";
 import { sendOrderNotifications } from "./aws-notifications";
 import { AxiosError } from "axios";
+import { extractOrderFromResponse, getOrderById } from "./order.service";
 
 // ─── Checkout ─────────────────────────
 
@@ -69,8 +70,8 @@ export const sendOrderConfirmation = async (
   phone: string
 ) => {
   try {
-    const orderRes = await api.get(`/orders/${orderId}`);
-    const orderDetails = orderRes.data.data;
+    const orderRes = await getOrderById(orderId);
+    const orderDetails = extractOrderFromResponse(orderRes);
 
     await sendOrderNotifications(email, phone, orderId, orderDetails);
 

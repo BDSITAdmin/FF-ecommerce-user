@@ -1,13 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Image from "next/image";
+import Script from "next/script";
 import logo from "@/public/assate/Layer_1 (1).svg";
 import google from "@/public/assate/google-icon.png";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import ForgotPassword from "@/components/ForgotPassword";
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleButtonConfiguration = {
+  type?: "standard" | "icon";
+  theme?: "outline" | "filled_blue" | "filled_black";
+  size?: "large" | "medium" | "small";
+  text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+  shape?: "rectangular" | "pill" | "circle" | "square";
+  width?: number;
+  logo_alignment?: "left" | "center";
+};
+
+type GoogleAccountsId = {
+  initialize: (config: {
+    client_id: string;
+    callback: (response: GoogleCredentialResponse) => void;
+  }) => void;
+  renderButton: (
+    parent: HTMLElement,
+    options: GoogleButtonConfiguration
+  ) => void;
+};
+
+declare global {
+  var google:
+    | {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    }
+    | undefined;
+
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    };
+  }
+}
 
 type LoginForm = {
   email: string;
@@ -21,8 +66,11 @@ type FormErrors = {
 };
 
 export default function Login() {
-  const { login, isLoading } = useAuth();
+  const { login, loginWithGoogle, isLoading } = useAuth();
   const router = useRouter();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const isGoogleConfigured = Boolean(googleClientId);
 
   const [form, setForm] = useState<LoginForm>({
     email: "",
@@ -31,6 +79,47 @@ export default function Login() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+
+  const getLoginErrorMessage = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      const response = error.response;
+
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "status" in response &&
+        (response.status === 400 || response.status === 401)
+      ) {
+        return "Invalid email or password. Please try again.";
+      }
+
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "data" in response &&
+        typeof response.data === "object" &&
+        response.data !== null &&
+        "message" in response.data &&
+        typeof response.data.message === "string"
+      ) {
+        return response.data.message;
+      }
+    }
+
+    if (error instanceof Error && error.message) {
+      if (
+        error.message.toLowerCase().includes("request failed with status code")
+      ) {
+        return "Invalid email or password. Please try again.";
+      }
+
+      return error.message;
+    }
+
+    return "Login failed. Please try again.";
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -59,9 +148,9 @@ export default function Login() {
 
       await login(form);
       router.push("/");
-    } catch {
+    } catch (error) {
       setErrors({
-        general: "Invalid email or password",
+        general: getLoginErrorMessage(error),
       });
     }
   };
@@ -71,9 +160,68 @@ export default function Login() {
     await handleLogin();
   };
 
+  const handleGoogleCredential = useEffectEvent(async (credential: string) => {
+    try {
+      setErrors({});
+      await loginWithGoogle(credential);
+      router.push("/");
+    } catch (error) {
+      setErrors({
+        general:
+          error instanceof Error
+            ? error.message
+            : "Google sign-in failed",
+      });
+    }
+  });
+
+  useEffect(() => {
+    const googleAccountsId = globalThis.google?.accounts?.id;
+
+    if (!isGoogleScriptLoaded || !googleClientId || !googleButtonRef.current || !googleAccountsId) {
+      return;
+    }
+
+    googleButtonRef.current.innerHTML = "";
+
+    googleAccountsId.initialize({
+      client_id: googleClientId,
+      callback: ({ credential }) => {
+        if (!credential) {
+          setErrors({
+            general: "Google sign-in did not return a credential.",
+          });
+          return;
+        }
+
+        void handleGoogleCredential(credential);
+      },
+    });
+
+    googleAccountsId.renderButton(googleButtonRef.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "pill",
+      logo_alignment: "left",
+      width: googleButtonRef.current.offsetWidth,
+    });
+  }, [googleClientId, isGoogleScriptLoaded]);
+
   return (
     <section className="bg-white sm:bg-[#0065A4]">
-  <div className="relative flex flex-col lg:flex-row sm:min-h-screen">
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={() => setIsGoogleScriptLoaded(true)}
+        onError={() => {
+          setErrors({
+            general: "Failed to load Google sign-in. Please try again.",
+          });
+        }}
+      />
+      <div className="relative flex flex-col lg:flex-row sm:min-h-screen">
 
         {/* BACKGROUND IMAGE */}
         <div
@@ -92,7 +240,7 @@ export default function Login() {
             {/* Logo */}
             <div className="text-center px-4 sm:px-6">
               {/* LOGO */}
-              <div className="mx-auto w-[120px] sm:w-[160px] md:w-[200px]">
+              <div className="mx-auto w-30 sm:w-40 md:w-50">
                 <Image
                   src={logo}
                   alt="logo"
@@ -115,7 +263,7 @@ export default function Login() {
             )}
 
             {/* Email */}
-            <div className="flex flex-col gap-2 w-full max-w-[472px]">
+            <div className="flex flex-col gap-2 w-full max-w-118">
               <label className="font-semibold text-sm sm:text-[16px]">
                 Email
               </label>
@@ -140,17 +288,18 @@ export default function Login() {
             </div>
 
             {/* Password */}
-            <div className="flex flex-col gap-2 w-full max-w-[472px]">
+            <div className="flex flex-col gap-2 w-full max-w-118">
 
               <div className="flex justify-between text-sm sm:text-[16px] font-semibold">
                 <label>Password</label>
 
-                <Link
-                  href="/forgot-password"
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(true)}
                   className="text-[#0065A6] hover:underline"
                 >
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               <div className="relative">
@@ -185,19 +334,36 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full max-w-[472px] h-12 sm:h-[60px] bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold sm:mt-3 flex items-center justify-center rounded-full hover:bg-[#023954] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full max-w-118 h-12 sm:h-15 bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold sm:mt-3 flex items-center justify-center rounded-full hover:bg-[#023954] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
 
             {/* Google Login */}
-            <button
-              type="button"
-              className="w-full max-w-[472px] h-12 sm:h-14 border border-[#0065A6] rounded-full flex items-center justify-center gap-2"
-            >
-              <Image src={google} alt="google" width={24} height={24} />
-              Sign in with <span className="font-semibold">Google</span>
-            </button>
+            <div className="relative w-full max-w-118 h-12 sm:h-14">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => {
+                  if (!isGoogleConfigured) {
+                    setErrors({
+                      general: "NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured.",
+                    });
+                  }
+                }}
+                className={`${isGoogleConfigured ? "pointer-events-none" : ""} w-full h-full border border-[#0065A6] rounded-full flex items-center justify-center gap-2 disabled:opacity-60`}
+              >
+                <Image src={google} alt="google" width={24} height={24} />
+                Sign in with <span className="font-semibold">Google</span>
+              </button>
+
+              {isGoogleConfigured && (
+                <div
+                  ref={googleButtonRef}
+                  className="absolute inset-0 z-10 overflow-hidden rounded-full opacity-0"
+                />
+              )}
+            </div>
 
             {/* Signup */}
             <p className="text-center text-sm sm:text-[16px] font-semibold">
@@ -211,6 +377,12 @@ export default function Login() {
 
         </div>
       </div>
+
+      <ForgotPassword
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        defaultEmail={form.email}
+      />
     </section>
   );
 }
