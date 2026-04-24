@@ -35,3 +35,7 @@ export const resetPassword = (email, otp, newPassword) => {
 export const changePassword = (data) => {
   return api.patch("/api/v1/auth/change-password", data);
 };
+
+export const updateProfile = (data) => {
+  return api.patch("/api/v1/auth/update-profile", data);
+};

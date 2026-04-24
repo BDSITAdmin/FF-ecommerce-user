@@ -9,6 +9,7 @@ import {
   loginUser,
   loginWithGoogleUser,
   logoutUser,
+  updateProfile,
 } from "../services/auth.service";
 
 
@@ -152,11 +153,49 @@ export const useAuth = () => {
     }
   };
 
+  const updateProfileAction = async (payload) => {
+    setIsLoading(true);
+    try {
+      const res = await updateProfile(payload);
+
+      let nextUser =
+        res?.data?.user ??
+        res?.data?.data?.user ??
+        res?.data?.data ??
+        null;
+
+      if (!nextUser || typeof nextUser !== "object") {
+        try {
+          const meRes = await getCurrentUser();
+          nextUser =
+            meRes?.data?.user ??
+            meRes?.data?.data?.user ??
+            meRes?.data?.data ??
+            null;
+        } catch { }
+      }
+
+      if (nextUser && typeof nextUser === "object") {
+        dispatch(setUser(nextUser));
+        try {
+          localStorage.setItem("user", JSON.stringify(nextUser));
+        } catch { }
+      }
+
+      return res;
+    } catch (error) {
+      normalizeAuthError(error, "Profile update failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     login,
     loginWithGoogle,
     logoutAction,
     changePasswordAction,
+    updateProfileAction,
     isLoading,
   };
 };

@@ -9,7 +9,6 @@ import {
     Mail,
     Phone,
     MapPin,
-    KeyRound,
     Package,
     LogOut,
     ChevronRight,
@@ -17,6 +16,8 @@ import {
     Clock,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
+import ProfileUpdateForm from "@/components/ProfileUpdateForm";
 import { useAuth } from "@/hooks/useAuth";
 import { getOrders } from "@/services/order.service";
 
@@ -110,7 +111,8 @@ export default function ProfilePage() {
         "User";
     const email = getString(user, "email");
     const phone = getString(user, "phone", "phoneNumber", "mobile");
-    const address = getString(user, "address");
+    const dateOfBirth = getString(user, "dateOfBirth", "dob");
+    const gender = getString(user, "gender");
     const avatarLetter = fullName.charAt(0).toUpperCase();
 
     const formatDate = (dateStr: string) => {
@@ -190,9 +192,15 @@ export default function ProfilePage() {
                     {/* Account Info Tab */}
                     {activeTab === "info" && (
                         <div className="px-8 py-8">
-                            <h2 className="text-lg font-semibold mb-6 text-black">
-                                Personal Details
-                            </h2>
+                            <div className="mb-6 flex flex-wrap items-center gap-3">
+
+
+                                <div className="flex items-center gap-2">
+                                    <ProfileUpdateForm user={user} />
+                                    <ChangePasswordModal />
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <InfoRow icon={<User size={18} />} label="Full Name" value={fullName} />
                                 <InfoRow
@@ -202,24 +210,20 @@ export default function ProfilePage() {
                                 />
                                 <InfoRow
                                     icon={<Phone size={18} />}
-                                    label="Phone"
+                                    label="Mobile Number"
                                     value={phone || "—"}
                                 />
                                 <InfoRow
-                                    icon={<MapPin size={18} />}
-                                    label="Address"
-                                    value={address || "—"}
+                                    icon={<User size={18} />}
+                                    label="Gender"
+                                    value={gender ? `${gender.charAt(0).toUpperCase()}${gender.slice(1)}` : "—"}
                                 />
-                            </div>
+                                <InfoRow
+                                    icon={<MapPin size={18} />}
+                                    label="Date of Birth"
+                                    value={dateOfBirth ? formatDate(dateOfBirth) : "—"}
+                                />
 
-                            <div className="mt-6">
-                                <Link
-                                    href="/profile/change-password"
-                                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#0065A6] hover:text-black"
-                                >
-                                    <KeyRound size={16} />
-                                    Change Password
-                                </Link>
                             </div>
                         </div>
                     )}
