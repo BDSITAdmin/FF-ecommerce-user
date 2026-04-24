@@ -110,7 +110,10 @@ const validateProfileForm = (values: ProfileFormState): ProfileFormErrors => {
     return errors;
 };
 
-export default function ProfileUpdateForm({ user }: Readonly<{ user: UserRecord }>) {
+export default function ProfileUpdateForm({
+    user,
+    inline = false,
+}: Readonly<{ user: UserRecord; inline?: boolean }>) {
     const { updateProfileAction, isLoading } = useAuth();
     const initialValues = useMemo(() => getInitialValues(user), [user]);
 
@@ -125,6 +128,7 @@ export default function ProfileUpdateForm({ user }: Readonly<{ user: UserRecord 
     }, [initialValues]);
 
     useEffect(() => {
+        if (inline) return;
         if (!isOpen) return;
 
         const previousOverflow = document.body.style.overflow;
@@ -133,15 +137,16 @@ export default function ProfileUpdateForm({ user }: Readonly<{ user: UserRecord 
         return () => {
             document.body.style.overflow = previousOverflow;
         };
-    }, [isOpen]);
+    }, [isOpen, inline]);
 
     useEffect(() => {
+        if (inline) return;
         if (!isOpen) return;
         setFormData(initialValues);
         setFieldErrors({});
         setSuccessMessage("");
         setErrorMessage("");
-    }, [initialValues, isOpen]);
+    }, [initialValues, isOpen, inline]);
 
     const isDirty = useMemo(() => {
         return JSON.stringify(formData) !== JSON.stringify(initialValues);
@@ -181,6 +186,143 @@ export default function ProfileUpdateForm({ user }: Readonly<{ user: UserRecord 
         }
     };
 
+    const formMarkup = (
+        <form onSubmit={onSubmit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black/75">First Name</label>
+                    <input
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={onChange}
+                        className="input-field"
+                    />
+                    {fieldErrors.firstName && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.firstName}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black/75">Last Name</label>
+                    <input
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={onChange}
+                        className="input-field"
+                    />
+                    {fieldErrors.lastName && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.lastName}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black/75">Email</label>
+                    <input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={onChange}
+                        className="input-field"
+                    />
+                    {fieldErrors.email && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black/75">Phone Number</label>
+                    <input
+                        name="phoneNumber"
+                        value={formData.phoneNumber}
+                        onChange={onChange}
+                        className="input-field"
+                        placeholder="+91 98765 43210"
+                    />
+                    {fieldErrors.phoneNumber && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.phoneNumber}</p>
+                    )}
+                </div>
+
+                <div>
+                    <label className="mb-1.5 block text-sm font-medium text-black/75">Date of Birth</label>
+                    <input
+                        name="dateOfBirth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={onChange}
+                        className="input-field"
+                    />
+                    {fieldErrors.dateOfBirth && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.dateOfBirth}</p>
+                    )}
+                </div>
+
+                <div>
+                    <p className="mb-1.5 block text-sm font-medium text-black/75">Gender</p>
+                    <div className="mt-1 flex flex-wrap gap-4 rounded-xl border border-black/10 p-3">
+                        {[
+                            { value: "male", label: "Male" },
+                            { value: "female", label: "Female" },
+                            { value: "other", label: "Other" },
+                        ].map((option) => (
+                            <label key={option.value} className="inline-flex items-center gap-2 text-sm text-black/80">
+                                <input
+                                    type="radio"
+                                    name="gender"
+                                    value={option.value}
+                                    checked={formData.gender === option.value}
+                                    onChange={onChange}
+                                    className="h-4 w-4 accent-[#0065A6]"
+                                />
+                                {option.label}
+                            </label>
+                        ))}
+                    </div>
+                    {fieldErrors.gender && (
+                        <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p>
+                    )}
+                </div>
+            </div>
+
+            {errorMessage && (
+                <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorMessage}</p>
+            )}
+
+            {successMessage && (
+                <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</p>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+                {!inline && (
+                    <button
+                        type="button"
+                        onClick={() => setIsOpen(false)}
+                        className="rounded-xl border border-black/15 px-5 py-2.5 text-sm font-semibold text-black hover:bg-gray-50 transition"
+                    >
+                        Cancel
+                    </button>
+                )}
+                <button
+                    type="submit"
+                    disabled={!isDirty || isLoading}
+                    className="rounded-xl bg-[#0065A6] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black transition"
+                >
+                    {isLoading ? "Updating..." : "Save Changes"}
+                </button>
+            </div>
+        </form>
+    );
+
+    if (inline) {
+        return (
+            <div className="rounded-2xl border border-black/10 bg-white p-5 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-black mb-1">Update Profile</h3>
+                <p className="text-xs text-black/55 mb-4">Keep your contact and identity details up to date.</p>
+                {formMarkup}
+            </div>
+        );
+    }
+
     return (
         <>
             <button
@@ -211,128 +353,7 @@ export default function ProfileUpdateForm({ user }: Readonly<{ user: UserRecord 
                             </button>
                         </div>
 
-                        <form onSubmit={onSubmit}>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-black/75">First Name</label>
-                                    <input
-                                        name="firstName"
-                                        value={formData.firstName}
-                                        onChange={onChange}
-                                        className="input-field"
-                                    />
-                                    {fieldErrors.firstName && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.firstName}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-black/75">Last Name</label>
-                                    <input
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={onChange}
-                                        className="input-field"
-                                    />
-                                    {fieldErrors.lastName && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.lastName}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-black/75">Email</label>
-                                    <input
-                                        name="email"
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={onChange}
-                                        className="input-field"
-                                    />
-                                    {fieldErrors.email && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-black/75">Phone Number</label>
-                                    <input
-                                        name="phoneNumber"
-                                        value={formData.phoneNumber}
-                                        onChange={onChange}
-                                        className="input-field"
-                                        placeholder="+91 98765 43210"
-                                    />
-                                    {fieldErrors.phoneNumber && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.phoneNumber}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium text-black/75">Date of Birth</label>
-                                    <input
-                                        name="dateOfBirth"
-                                        type="date"
-                                        value={formData.dateOfBirth}
-                                        onChange={onChange}
-                                        className="input-field"
-                                    />
-                                    {fieldErrors.dateOfBirth && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.dateOfBirth}</p>
-                                    )}
-                                </div>
-
-                                <div>
-                                    <p className="mb-1.5 block text-sm font-medium text-black/75">Gender</p>
-                                    <div className="mt-1 flex flex-wrap gap-4 rounded-xl border border-black/10 p-3">
-                                        {[
-                                            { value: "male", label: "Male" },
-                                            { value: "female", label: "Female" },
-                                            { value: "other", label: "Other" },
-                                        ].map((option) => (
-                                            <label key={option.value} className="inline-flex items-center gap-2 text-sm text-black/80">
-                                                <input
-                                                    type="radio"
-                                                    name="gender"
-                                                    value={option.value}
-                                                    checked={formData.gender === option.value}
-                                                    onChange={onChange}
-                                                    className="h-4 w-4 accent-[#0065A6]"
-                                                />
-                                                {option.label}
-                                            </label>
-                                        ))}
-                                    </div>
-                                    {fieldErrors.gender && (
-                                        <p className="mt-1 text-xs text-red-600">{fieldErrors.gender}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {errorMessage && (
-                                <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorMessage}</p>
-                            )}
-
-                            {successMessage && (
-                                <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successMessage}</p>
-                            )}
-
-                            <div className="mt-5 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsOpen(false)}
-                                    className="rounded-xl border border-black/15 px-5 py-2.5 text-sm font-semibold text-black hover:bg-gray-50 transition"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={!isDirty || isLoading}
-                                    className="rounded-xl bg-[#0065A6] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-black transition"
-                                >
-                                    {isLoading ? "Updating..." : "Save Changes"}
-                                </button>
-                            </div>
-                        </form>
+                        {formMarkup}
                     </div>
                 </div>
             )}
