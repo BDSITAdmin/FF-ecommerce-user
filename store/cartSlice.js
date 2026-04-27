@@ -49,11 +49,16 @@ const normalizeProduct = (product) => {
   };
 };
 
-const isSameCartVariant = (item, productId, packId) => {
+const isSameCartVariant = (item, productId, packId, packSize) => {
   const sameProduct = item?.id === productId;
   if (!sameProduct) return false;
-  if (packId === undefined) return true;
-  return getPackId(item) === packId;
+  const hasPackId = packId !== undefined && packId !== null && String(packId) !== "";
+  if (hasPackId) return getPackId(item) === packId;
+
+  const hasPackSize = packSize !== undefined && packSize !== null;
+  if (hasPackSize) return Number(getPackSize(item) || 0) === Number(packSize || 0);
+
+  return true;
 };
 
 const extractCartItems = (res) => {
@@ -184,8 +189,10 @@ export const removeFromCartAsync = createAsyncThunk(
   async (payload) => {
     const productId =
       typeof payload === "object" ? payload?.productId : payload;
+    const packSize =
+      typeof payload === "object" ? payload?.packSize : undefined;
     if (!productId) throw new Error("Missing product id");
-    await removeCartItem({ productId });
+    await removeCartItem({ productId, packSize });
     return payload;
   }
 );
@@ -204,10 +211,10 @@ export const removeSingleFromCartAsync = createAsyncThunk(
     // Try to derive current quantity from expanded state.
     const state = getState?.() || {};
     const items = state?.cart?.items || [];
-    const currentQty = items.filter((i) => isSameCartVariant(i, productId, packId)).length;
+    const currentQty = items.filter((i) => isSameCartVariant(i, productId, packId, packSize)).length;
 
     if (currentQty <= 1) {
-      await removeCartItem({ productId });
+      await removeCartItem({ productId, packSize });
       return payload;
     }
 
@@ -218,7 +225,7 @@ export const removeSingleFromCartAsync = createAsyncThunk(
     } catch {}
 
     // Fallback: absolute quantity update (PATCH/PUT).
-    await updateCartItemQuantity({ productId, quantity: currentQty - 1 });
+    await updateCartItemQuantity({ productId, packSize, quantity: currentQty - 1 });
     return payload;
   }
 );
@@ -295,10 +302,11 @@ const cartSlice = createSlice({
         const product = normalizeProduct(payload.product);
         const productId = payload.productId;
         const packId = payload.packId;
+        const packSize = payload.packSize;
         const quantity = Math.max(1, Number(payload.quantity || 1));
 
         const remaining = state.items.filter(
-          (item) => !isSameCartVariant(item, productId, packId)
+          (item) => !isSameCartVariant(item, productId, packId, packSize)
         );
 
         const rebuilt = [];
@@ -307,6 +315,8 @@ const cartSlice = createSlice({
             ...product,
             id: productId,
             packId,
+            packSize,
+            packQuantity: packSize,
           });
         }
 
@@ -334,8 +344,9 @@ const cartSlice = createSlice({
         const payload = action.payload;
         const productId = typeof payload === "object" ? payload?.productId : payload;
         const packId = typeof payload === "object" ? payload?.packId : undefined;
+        const packSize = typeof payload === "object" ? payload?.packSize : undefined;
         state.items = state.items.filter(
-          (item) => !isSameCartVariant(item, productId, packId)
+          (item) => !isSameCartVariant(item, productId, packId, packSize)
         );
       })
       .addCase(removeFromCartAsync.rejected, (state, action) => {
@@ -348,8 +359,9 @@ const cartSlice = createSlice({
         const payload = action.payload;
         const productId = typeof payload === "object" ? payload?.productId : payload;
         const packId = typeof payload === "object" ? payload?.packId : undefined;
+        const packSize = typeof payload === "object" ? payload?.packSize : undefined;
         const index = state.items.findIndex((item) =>
-          isSameCartVariant(item, productId, packId)
+          isSameCartVariant(item, productId, packId, packSize)
         );
         if (index !== -1) state.items.splice(index, 1);
       })

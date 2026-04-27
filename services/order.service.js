@@ -14,6 +14,22 @@ export const getOrderById = (orderId) => {
   return api.get(`/api/v1/orders/${orderId}`);
 };
 
+export const cancelOrder = async (orderId) => {
+  const path = `/api/v1/orders/${orderId}/cancel`;
+
+  try {
+    return await api.patch(path);
+  } catch (error) {
+    const status = error?.response?.status;
+
+    if (status === 404 || status === 405) {
+      return api.post(path);
+    }
+
+    throw error;
+  }
+};
+
 export const getShipmentById = (shipmentId) => {
   return api.get(`/api/v1/shipments/${shipmentId}`);
 };

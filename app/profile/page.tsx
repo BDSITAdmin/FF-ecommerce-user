@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ProfileUpdateForm from "@/components/ProfileUpdateForm";
-import { downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
+import { cancelOrder, downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
 
 type RootState = {
     user: { user: unknown };
@@ -54,6 +54,16 @@ const paymentStatusColor: Record<string, string> = {
 const canTrackOrderStatus = (status: string) => {
     const normalized = status.toLowerCase();
     return normalized === "shipped";
+};
+
+const normalizeStatus = (value: unknown) =>
+    String(value ?? "")
+        .toLowerCase()
+        .replace(/[_\s-]+/g, "")
+        .trim();
+
+const canCancelOrder = (status: string) => {
+    return ["paid", "pending", "confirmed"].includes(status);
 };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -98,6 +108,20 @@ const getEstimatedDeliveryLabel = (order: any, status: string, shipment?: any) =
     return "-";
 };
 
+const recentRequestTimestamps = new Map<string, number>();
+
+const wasRecentlyRequested = (key: string, windowMs = 1200) => {
+    const now = Date.now();
+    const lastRequestedAt = recentRequestTimestamps.get(key) ?? 0;
+
+    if (now - lastRequestedAt < windowMs) {
+        return true;
+    }
+
+    recentRequestTimestamps.set(key, now);
+    return false;
+};
+
 export default function ProfilePage() {
     const router = useRouter();
     const rawUser = useSelector((state: RootState) => state.user.user);
@@ -105,15 +129,26 @@ export default function ProfilePage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [ordersError, setOrdersError] = useState("");
+    const [orderActionMessage, setOrderActionMessage] = useState("");
     const [trackingError, setTrackingError] = useState("");
     const [invoiceDownloadingOrderId, setInvoiceDownloadingOrderId] = useState<string | null>(null);
     const [shipmentByOrderId, setShipmentByOrderId] = useState<Record<string, any>>({});
     const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
+    const [confirmCancelOrderId, setConfirmCancelOrderId] = useState<string>("");
+    const [cancellingOrderId, setCancellingOrderId] = useState<string>("");
     const [activeSection, setActiveSection] = useState<"info" | "orders">("info");
     const [showUpdateProfile, setShowUpdateProfile] = useState(false);
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
+
+    const userSessionKey = useMemo(() => {
+        if (!rawUser) return "";
+        if (!isRecord(rawUser)) return "authenticated";
+
+        const source = isRecord(rawUser.user) ? rawUser.user : rawUser;
+        return getString(source, "id", "_id", "userId") || "authenticated";
+    }, [rawUser]);
 
     useEffect(() => {
         if (!rawUser) {
@@ -122,7 +157,9 @@ export default function ProfilePage() {
     }, [rawUser, router]);
 
     useEffect(() => {
-        if (!rawUser) return;
+        if (!userSessionKey) return;
+
+        let cancelled = false;
 
         const fetchOrders = async () => {
             setOrdersLoading(true);
@@ -138,6 +175,7 @@ export default function ProfilePage() {
                     payload?.items ??
                     [];
 
+                if (cancelled) return;
                 setOrders(Array.isArray(data) ? data : []);
 
                 const resolvedTotalPages =
@@ -148,17 +186,23 @@ export default function ProfilePage() {
 
                 setTotalPages(resolvedTotalPages > 0 ? resolvedTotalPages : 1);
             } catch {
+                if (cancelled) return;
                 setOrdersError("Failed to load orders.");
             } finally {
+                if (cancelled) return;
                 setOrdersLoading(false);
             }
         };
 
         fetchOrders();
-    }, [rawUser, page, limit]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [userSessionKey, page, limit]);
 
     useEffect(() => {
-        if (!rawUser || orders.length === 0) {
+        if (!userSessionKey || orders.length === 0) {
             setShipmentByOrderId({});
             return;
         }
@@ -175,6 +219,13 @@ export default function ProfilePage() {
                 if (!cancelled) setShipmentByOrderId({});
                 return;
             }
+
+            const shipmentRequestKey = `shipments:${trackableOrders
+                .map((order: any) => `${getOrderKey(order)}:${String(order?.shipmentId ?? order?.shipment?.id ?? "")}`)
+                .sort()
+                .join("|")}`;
+
+            if (wasRecentlyRequested(shipmentRequestKey)) return;
 
             const responses = await Promise.all(
                 trackableOrders.map(async (order: any) => {
@@ -212,7 +263,7 @@ export default function ProfilePage() {
         return () => {
             cancelled = true;
         };
-    }, [rawUser, orders]);
+    }, [userSessionKey, orders]);
 
     if (!rawUser) return null;
 
@@ -324,6 +375,44 @@ export default function ProfilePage() {
             setTrackingError("Unable to download invoice right now.");
         } finally {
             setInvoiceDownloadingOrderId(null);
+        }
+    };
+
+    const handleConfirmCancelOrder = (orderId: string) => {
+        setOrderActionMessage("");
+        setTrackingError("");
+        setConfirmCancelOrderId(orderId);
+    };
+
+    const handleCancelOrder = async () => {
+        if (!confirmCancelOrderId || cancellingOrderId) return;
+
+        setCancellingOrderId(confirmCancelOrderId);
+        setOrderActionMessage("");
+        setTrackingError("");
+
+        try {
+            await cancelOrder(confirmCancelOrderId);
+
+            setOrders((prev) =>
+                prev.map((order) => {
+                    const currentId = getOrderKey(order);
+                    if (currentId !== confirmCancelOrderId) return order;
+
+                    return {
+                        ...order,
+                        status: "cancelled",
+                        paymentStatus: "cancelled",
+                    };
+                })
+            );
+
+            setOrderActionMessage("Cancelled successfully");
+            setConfirmCancelOrderId("");
+        } catch {
+            setTrackingError("Unable to cancel this order right now.");
+        } finally {
+            setCancellingOrderId("");
         }
     };
 
@@ -468,6 +557,12 @@ export default function ProfilePage() {
                                     <p className="text-red-500 text-sm">{ordersError}</p>
                                 )}
 
+                                {!ordersLoading && !!orderActionMessage && (
+                                    <p className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+                                        {orderActionMessage}
+                                    </p>
+                                )}
+
                                 {!ordersLoading && trackingError && (
                                     <p className="text-red-500 text-sm mb-3">{trackingError}</p>
                                 )}
@@ -502,15 +597,42 @@ export default function ProfilePage() {
                                                 0;
                                             const createdAt =
                                                 order.createdAt ?? order.created_at ?? "";
-                                            const itemCount =
-                                                order.items?.length ??
-                                                order.orderItems?.length ??
-                                                0;
+                                            const rawOrderItems =
+                                                Array.isArray(order.items) && order.items.length > 0
+                                                    ? order.items
+                                                    : Array.isArray(order.orderItems)
+                                                        ? order.orderItems
+                                                        : [];
+                                            const normalizedOrderItems = rawOrderItems.map((item: any, itemIndex: number) => {
+                                                const product = item?.product ?? {};
+                                                const quantity = Number(item?.quantity ?? 1) || 1;
+                                                const packSize = Number(item?.packSize ?? item?.pack?.quantity ?? 1) || 1;
+                                                const unitPrice = Number(item?.price ?? product?.price ?? 0) || 0;
+                                                const packCost = unitPrice * packSize * quantity;
+
+                                                return {
+                                                    key: String(item?.orderItemId ?? item?.id ?? `${itemIndex}`),
+                                                    name: String(product?.name ?? item?.name ?? "Product"),
+                                                    image: product?.images?.[0] ?? item?.image ?? "/assate/home-image.webp",
+                                                    quantity,
+                                                    packSize,
+                                                    unitPrice,
+                                                    packCost,
+                                                };
+                                            });
+                                            const itemCount = normalizedOrderItems.length;
+                                            const totalUnits = normalizedOrderItems.reduce(
+                                                (sum: number, item: { quantity: number; packSize: number }) =>
+                                                    sum + item.quantity * item.packSize,
+                                                0
+                                            );
                                             const paymentStatus = String(
                                                 order.paymentStatus ??
                                                 order.transaction?.paymentStatus ??
                                                 "pending"
                                             ).toLowerCase();
+                                            const normalizedOrderStatus = normalizeStatus(order.status ?? order.orderStatus ?? "pending");
+                                            const normalizedPaymentStatus = normalizeStatus(order.paymentStatus ?? order.transaction?.paymentStatus ?? "pending");
                                             const paymentMethod =
                                                 order.paymentMethod ??
                                                 order.paymentGateway ??
@@ -520,17 +642,11 @@ export default function ProfilePage() {
                                             const zipCode = order.shippingAddress?.zipCode ?? "";
                                             const remarks = String(order.remarks ?? "").trim();
                                             const locationParts = [city, state, zipCode].filter(Boolean);
-                                            const firstItem =
-                                                Array.isArray(order.items) && order.items.length > 0
-                                                    ? order.items[0]
-                                                    : Array.isArray(order.orderItems) && order.orderItems.length > 0
-                                                        ? order.orderItems[0]
-                                                        : null;
+                                            const firstOrderItem = normalizedOrderItems[0];
                                             const productName =
-                                                firstItem?.product?.name ?? firstItem?.name ?? "Product";
+                                                firstOrderItem?.name ?? "Product";
                                             const productImage =
-                                                firstItem?.product?.images?.[0] ??
-                                                firstItem?.image ??
+                                                firstOrderItem?.image ??
                                                 "/assate/home-image.webp";
 
                                             const showTrackButton = canTrackOrderStatus(status);
@@ -577,6 +693,7 @@ export default function ProfilePage() {
                                                             <p className="text-xs text-black/50 mt-0.5">
                                                                 {formatDate(createdAt)}
                                                                 {itemCount > 0 && ` · ${itemCount} item${itemCount === 1 ? "" : "s"}`}
+                                                                {totalUnits > 0 && ` · ${totalUnits} unit${totalUnits === 1 ? "" : "s"}`}
                                                             </p>
 
                                                             
@@ -605,11 +722,50 @@ export default function ProfilePage() {
                                                                         : "Download Invoice"}
                                                                 </button>
                                                             )}
+
+                                                            {canCancelOrder(normalizedOrderStatus) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleConfirmCancelOrder(currentOrderId)}
+                                                                    disabled={cancellingOrderId === currentOrderId}
+                                                                    className="mt-2 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    {cancellingOrderId === currentOrderId ? "Cancelling..." : "Cancel Order"}
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
 
                                                     <div className="min-w-0 md:col-span-7 lg:col-span-7">
-                                                        
+                                                        {normalizedOrderItems.length > 0 && (
+                                                            <div className="space-y-2 rounded-xl border border-black/10 bg-[#fafcff] p-3">
+                                                                {normalizedOrderItems.map((item: any) => (
+                                                                    <div
+                                                                        key={item.key}
+                                                                        className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-2"
+                                                                    >
+                                                                        <div className="min-w-0 flex items-center gap-2">
+                                                                            <img
+                                                                                src={item.image}
+                                                                                alt={item.name}
+                                                                                className="h-11 w-11 rounded-md border border-black/10 object-cover"
+                                                                            />
+                                                                            <div className="min-w-0">
+                                                                                <p className="truncate text-xs font-semibold text-black">
+                                                                                    {item.name}
+                                                                                </p>
+                                                                                <p className="text-[11px] text-black/60">
+                                                                                    Cost = {formatAmount(item.unitPrice)} x {item.packSize} x {item.quantity}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p className="shrink-0 text-xs font-bold text-black">
+                                                                            {formatAmount(item.packCost)}
+                                                                        </p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
 
                                                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-black/70">
                                                              <p className="text-sm font-bold text-black rounded-lg bg-[#f8fbff] px-2.5 py-1 border border-black/10">
@@ -703,6 +859,36 @@ export default function ProfilePage() {
                     </section>
                 </div>
             </div>
+
+            {confirmCancelOrderId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <h2 className="text-lg font-bold text-black">Cancel order?</h2>
+                        <p className="mt-2 text-sm text-black/65">
+                            Are you sure you want to cancel this order? This action cannot be undone.
+                        </p>
+
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmCancelOrderId("")}
+                                disabled={!!cancellingOrderId}
+                                className="rounded-lg border border-black/15 px-4 py-2 text-sm font-medium text-black hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                No
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCancelOrder}
+                                disabled={!!cancellingOrderId}
+                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {cancellingOrderId ? "Cancelling..." : "Yes, Cancel"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

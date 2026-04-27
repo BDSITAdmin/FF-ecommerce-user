@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CreditCard, MapPin, Truck, UserRoundPen } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, CreditCard, MapPin, Truck, UserRoundPen } from 'lucide-react';
 import Link from 'next/link';
 import { useSelector } from 'react-redux';
 import Navbar from '@/components/Navbar';
@@ -26,7 +26,8 @@ export default function CheckoutPage() {
     const map = new Map<string, CartItem & { quantity: number }>();
 
     for (const item of cartItems) {
-      const cartKey = `${item.id}::${item.packId || 'default'}`;
+      const variantKey = item.packId || `size-${item.packSize ?? item.packQuantity ?? 1}`;
+      const cartKey = `${item.id}::${variantKey}`;
       const existing = map.get(cartKey);
       if (existing) {
         existing.quantity += 1;
@@ -151,6 +152,16 @@ export default function CheckoutPage() {
 
   return (
     <main className="min-h-screen bg-white text-black">
+      {submitSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-emerald-200 bg-white p-8 text-center shadow-2xl">
+            <CheckCircle2 className="mx-auto mb-4 h-14 w-14 text-emerald-600" />
+            <h2 className="text-2xl font-bold text-black">Order Successful</h2>
+            <p className="mt-2 text-sm text-black/70">{submitSuccess}</p>
+          </div>
+        </div>
+      )}
+
       <Navbar />
       <div className="max-w-7xl mx-auto px-6">
         <Link href="/cart" className="inline-flex items-center gap-2 text-[#0065A6] hover:text-black mb-8">

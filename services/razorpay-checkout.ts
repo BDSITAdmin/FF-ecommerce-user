@@ -5,11 +5,31 @@ export type RazorpayPaymentResponse = {
   razorpay_signature: string;
 };
 
+let razorpayScriptPromise: Promise<boolean> | null = null;
+
 // ✅ Load script first
 const loadRazorpayScript = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    if (typeof window !== "undefined" && (window as any).Razorpay) {
-      return resolve(true);
+  if (typeof window === "undefined") {
+    return Promise.resolve(false);
+  }
+
+  if ((window as any).Razorpay) {
+    return Promise.resolve(true);
+  }
+
+  if (razorpayScriptPromise) {
+    return razorpayScriptPromise;
+  }
+
+  razorpayScriptPromise = new Promise((resolve) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true), { once: true });
+      existingScript.addEventListener("error", () => resolve(false), { once: true });
+      return;
     }
 
     const script = document.createElement("script");
@@ -21,6 +41,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
     document.body.appendChild(script);
   });
+
+  return razorpayScriptPromise;
 };
 
 export const openRazorpayCheckout = async (

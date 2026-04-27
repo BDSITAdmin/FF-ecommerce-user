@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 
 import { clearCartAsync } from "../store/cartSlice";
@@ -27,6 +27,7 @@ const steps: Step[] = ["address", "shipping", "payment", "review"];
 export const useCheckoutForm = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const cartItems = useSelector((state: any) => state.cart.items as Array<Record<string, any>>);
 
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,6 +115,71 @@ export const useCheckoutForm = () => {
     );
   }, []);
 
+  const extractProductId = useCallback((value: unknown) => {
+    if (!value || typeof value !== "object") return "";
+
+    const record = value as Record<string, any>;
+    const data =
+      record.data && typeof record.data === "object"
+        ? (record.data as Record<string, any>)
+        : null;
+
+    const order =
+      record.order ??
+      data?.order ??
+      record;
+
+    const items =
+      order?.items ??
+      data?.items ??
+      record.items ??
+      [];
+
+    if (!Array.isArray(items) || !items.length) return "";
+
+    const firstItem = items[0] ?? {};
+
+    return String(
+      firstItem.productId ??
+      firstItem.product?.id ??
+      firstItem.product?._id ??
+      firstItem.id ??
+      ""
+    );
+  }, []);
+
+  const firstCartProductId = useMemo(() => {
+    const firstItem = cartItems?.[0] as Record<string, any> | undefined;
+    if (!firstItem) return "";
+
+    return String(
+      firstItem.id ??
+      firstItem._id ??
+      firstItem.productId ??
+      firstItem.product?.id ??
+      firstItem.product?._id ??
+      ""
+    );
+  }, [cartItems]);
+
+  const redirectToProductDetails = useCallback(
+    (candidateProductId?: string) => {
+      const resolvedProductId = String(candidateProductId || "").trim() || firstCartProductId;
+
+      if (resolvedProductId) {
+        window.setTimeout(() => {
+          router.replace(`/products/${resolvedProductId}`);
+        }, 1200);
+        return;
+      }
+
+      window.setTimeout(() => {
+        router.replace("/products");
+      }, 1200);
+    },
+    [firstCartProductId, router]
+  );
+
   // ─── STEP NAVIGATION ─────────────────
 
   const nextStep = useCallback(() => {
@@ -172,11 +238,13 @@ export const useCheckoutForm = () => {
 
         // ✅ COD FLOW
         if (data.paymentMethod === "COD") {
-          setSubmitSuccess("Order placed successfully");
+          const createdProductId =
+            extractProductId(session) ||
+            extractProductId(res?.data);
+
+          setSubmitSuccess("Order placed successfully! Redirecting to product details...");
           dispatch(clearCartAsync());
-          if (createdOrderId) {
-            router.push(`/order-success?orderId=${createdOrderId}`);
-          }
+          redirectToProductDetails(createdProductId);
           return;
         }
 
@@ -214,18 +282,25 @@ export const useCheckoutForm = () => {
           extractOrderId(verifyRes?.data?.data) ||
           createdOrderId;
 
-        setSubmitSuccess("Payment successful ✅");
+        const paidProductId =
+          extractProductId(verifyRes?.data) ||
+          extractProductId(verifyRes?.data?.data) ||
+          extractProductId(session) ||
+          extractProductId(res?.data);
+
+        setSubmitSuccess("Payment successful! Redirecting to product details...");
         dispatch(clearCartAsync());
-        if (verifiedOrderId) {
-          router.push(`/order-success?orderId=${verifiedOrderId}`);
-        }
+
+        // Keep order id extraction for compatibility with existing API payload shapes.
+        void verifiedOrderId;
+        redirectToProductDetails(paidProductId);
       } catch (error: any) {
         setSubmitError(error?.message || "Something went wrong");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatch, extractOrderId, isSubmitting, router, shippingAddress]
+    [dispatch, extractOrderId, extractProductId, isSubmitting, redirectToProductDetails, shippingAddress]
   );
 
   const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);
