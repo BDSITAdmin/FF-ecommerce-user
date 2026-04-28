@@ -607,8 +607,6 @@ export default function ProfilePage() {
                                                 const product = item?.product ?? {};
                                                 const quantity = Number(item?.quantity ?? 1) || 1;
                                                 const packSize = Number(item?.packSize ?? item?.pack?.quantity ?? 1) || 1;
-                                                const unitPrice = Number(item?.price ?? product?.price ?? 0) || 0;
-                                                const packCost = unitPrice * packSize * quantity;
 
                                                 return {
                                                     key: String(item?.orderItemId ?? item?.id ?? `${itemIndex}`),
@@ -616,8 +614,6 @@ export default function ProfilePage() {
                                                     image: product?.images?.[0] ?? item?.image ?? "/assate/home-image.webp",
                                                     quantity,
                                                     packSize,
-                                                    unitPrice,
-                                                    packCost,
                                                 };
                                             });
                                             const itemCount = normalizedOrderItems.length;
@@ -738,30 +734,14 @@ export default function ProfilePage() {
 
                                                     <div className="min-w-0 md:col-span-7 lg:col-span-7">
                                                         {normalizedOrderItems.length > 0 && (
-                                                            <div className="space-y-2 rounded-xl border border-black/10 bg-[#fafcff] p-3">
+                                                            <div className="rounded-lg bg-[#fafcff] px-3 py-2">
                                                                 {normalizedOrderItems.map((item: any) => (
                                                                     <div
                                                                         key={item.key}
-                                                                        className="flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-2"
+                                                                        className="text-xs text-black/75 leading-5"
                                                                     >
-                                                                        <div className="min-w-0 flex items-center gap-2">
-                                                                            <img
-                                                                                src={item.image}
-                                                                                alt={item.name}
-                                                                                className="h-11 w-11 rounded-md border border-black/10 object-cover"
-                                                                            />
-                                                                            <div className="min-w-0">
-                                                                                <p className="truncate text-xs font-semibold text-black">
-                                                                                    {item.name}
-                                                                                </p>
-                                                                                <p className="text-[11px] text-black/60">
-                                                                                    Cost = {formatAmount(item.unitPrice)} x {item.packSize} x {item.quantity}
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                        <p className="shrink-0 text-xs font-bold text-black">
-                                                                            {formatAmount(item.packCost)}
-                                                                        </p>
+                                                                        <span className="font-semibold text-black">{item.name}</span>
+                                                                        <span className="text-black/60"> · Qty {item.quantity} · Pack {item.packSize}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
