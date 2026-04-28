@@ -15,10 +15,13 @@ import {
     Download,
     ChevronRight,
     Clock,
+    RotateCcw,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ProfileUpdateForm from "@/components/ProfileUpdateForm";
+import ReturnRequestModal from "@/components/ReturnRequestModal";
 import { cancelOrder, downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
+import { createReturnRequest } from "@/services/return.service";
 
 type RootState = {
     user: { user: unknown };
@@ -136,6 +139,12 @@ export default function ProfilePage() {
     const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
     const [confirmCancelOrderId, setConfirmCancelOrderId] = useState<string>("");
     const [cancellingOrderId, setCancellingOrderId] = useState<string>("");
+    const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+    const [returnReason, setReturnReason] = useState("");
+    const [returnImage, setReturnImage] = useState<File | null>(null);
+    const [returnSubmitting, setReturnSubmitting] = useState(false);
+    const [returnError, setReturnError] = useState("");
+    const [returnSuccess, setReturnSuccess] = useState("");
     const [activeSection, setActiveSection] = useState<"info" | "orders">("info");
     const [showUpdateProfile, setShowUpdateProfile] = useState(false);
     const [page, setPage] = useState(1);
@@ -155,6 +164,17 @@ export default function ProfilePage() {
             router.push("/login");
         }
     }, [rawUser, router]);
+
+    useEffect(() => {
+        if (!returnOrderId) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [returnOrderId]);
 
     useEffect(() => {
         if (!userSessionKey) return;
@@ -384,6 +404,93 @@ export default function ProfilePage() {
         setConfirmCancelOrderId(orderId);
     };
 
+    const handleOpenReturn = (order: any) => {
+        const orderId = getOrderKey(order);
+        if (!orderId) {
+            setTrackingError("Order ID not found for return request.");
+            return;
+        }
+
+        setReturnOrderId(orderId);
+        setReturnReason("");
+        setReturnImage(null);
+        setReturnError("");
+        setReturnSuccess("");
+    };
+
+    const handleCloseReturn = () => {
+        setReturnOrderId(null);
+        setReturnReason("");
+        setReturnImage(null);
+        setReturnError("");
+        setReturnSuccess("");
+    };
+
+    const handleReturnSuccessOk = () => {
+        handleCloseReturn();
+        setActiveSection("info");
+    };
+
+    const handleReturnFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0] ?? null;
+        setReturnImage(file);
+    };
+
+    const handleSubmitReturn = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setReturnError("");
+        setReturnSuccess("");
+
+        if (!returnOrderId) {
+            setReturnError("Order ID is required.");
+            return;
+        }
+
+        if (!returnReason.trim()) {
+            setReturnError("Please enter a return reason.");
+            return;
+        }
+
+        const payload = new FormData();
+        payload.append("orderId", returnOrderId);
+        payload.append("reason", returnReason.trim());
+
+        if (returnImage) {
+            payload.append("image", returnImage);
+        }
+
+        setReturnSubmitting(true);
+        try {
+            const res = await createReturnRequest(payload);
+            const updatedOrder = res?.data?.data?.order ?? res?.data?.order ?? null;
+            const responseMessage = res?.data?.message ?? "Return request submitted successfully.";
+
+            if (updatedOrder) {
+                const updatedOrderId = String(updatedOrder?.id ?? updatedOrder?._id ?? "");
+                setOrders((prev) =>
+                    prev.map((order) => {
+                        const currentId = getOrderKey(order);
+                        if (currentId !== updatedOrderId && currentId !== returnOrderId) return order;
+
+                        return {
+                            ...order,
+                            status: updatedOrder.status ?? order.status,
+                        };
+                    })
+                );
+            }
+
+            setReturnSuccess(responseMessage);
+            setReturnReason("");
+            setReturnImage(null);
+        } catch (err: any) {
+            const message = err?.response?.data?.message || "Failed to submit return request.";
+            setReturnError(message);
+        } finally {
+            setReturnSubmitting(false);
+        }
+    };
+
     const handleCancelOrder = async () => {
         if (!confirmCancelOrderId || cancellingOrderId) return;
 
@@ -439,11 +546,10 @@ export default function ProfilePage() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveSection("info")}
-                                    className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition flex items-center justify-between border ${
-                                        activeSection === "info"
-                                            ? "bg-[#0065A6]/10 text-[#0065A6] border-[#0065A6]/25"
-                                            : "text-black/70 hover:bg-gray-50 border-transparent"
-                                    }`}
+                                    className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition flex items-center justify-between border ${activeSection === "info"
+                                        ? "bg-[#0065A6]/10 text-[#0065A6] border-[#0065A6]/25"
+                                        : "text-black/70 hover:bg-gray-50 border-transparent"
+                                        }`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <User size={16} />
@@ -455,11 +561,10 @@ export default function ProfilePage() {
                                 <button
                                     type="button"
                                     onClick={() => setActiveSection("orders")}
-                                    className={`mt-2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition flex items-center justify-between border ${
-                                        activeSection === "orders"
-                                            ? "bg-[#0065A6]/10 text-[#0065A6] border-[#0065A6]/25"
-                                            : "text-black/70 hover:bg-gray-50 border-transparent"
-                                    }`}
+                                    className={`mt-2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition flex items-center justify-between border ${activeSection === "orders"
+                                        ? "bg-[#0065A6]/10 text-[#0065A6] border-[#0065A6]/25"
+                                        : "text-black/70 hover:bg-gray-50 border-transparent"
+                                        }`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <Package size={16} />
@@ -667,9 +772,8 @@ export default function ProfilePage() {
                                                     className="relative grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-xl border border-black/10 bg-white hover:border-[#0065A6]/30 transition"
                                                 >
                                                     <span
-                                                        className={`absolute top-3 right-3 text-xs font-medium px-3 py-1 rounded-full capitalize ${
-                                                            statusColor[status] ?? "bg-gray-100 text-gray-700"
-                                                        }`}
+                                                        className={`absolute top-3 right-3 text-xs font-medium px-3 py-1 rounded-full capitalize ${statusColor[status] ?? "bg-gray-100 text-gray-700"
+                                                            }`}
                                                     >
                                                         {status}
                                                     </span>
@@ -696,7 +800,7 @@ export default function ProfilePage() {
                                                                 {totalUnits > 0 && ` · ${totalUnits} unit${totalUnits === 1 ? "" : "s"}`}
                                                             </p>
 
-                                                            
+
 
                                                             {showTrackButton && (
                                                                 <button
@@ -708,6 +812,16 @@ export default function ProfilePage() {
                                                                     Track Order
                                                                 </button>
                                                             )}
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenReturn(order)}
+                                                                disabled={status !== "delivered"}
+                                                                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#0065A6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0065A6] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#0065A6]/10 transition"
+                                                            >
+                                                                <RotateCcw size={13} />
+                                                                Return
+                                                            </button>
 
                                                             {showInvoiceButton && (
                                                                 <button
@@ -768,15 +882,14 @@ export default function ProfilePage() {
                                                         )}
 
                                                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-black/70">
-                                                             <p className="text-sm font-bold text-black rounded-lg bg-[#f8fbff] px-2.5 py-1 border border-black/10">
+                                                            <p className="text-sm font-bold text-black rounded-lg bg-[#f8fbff] px-2.5 py-1 border border-black/10">
                                                                 Amount: <span className="font-semibold uppercase">{formatAmount(Number(total) || 0)}</span>
                                                             </p>
                                                             <p>
                                                                 Payment Status:{" "}
                                                                 <span
-                                                                    className={`text-[11px] font-semibold uppercase ${
-                                                                        paymentStatusColor[paymentStatus] ?? "text-gray-700"
-                                                                    }`}
+                                                                    className={`text-[11px] font-semibold uppercase ${paymentStatusColor[paymentStatus] ?? "text-gray-700"
+                                                                        }`}
                                                                 >
                                                                     {paymentStatus}
                                                                 </span>
@@ -889,6 +1002,21 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
+
+            <ReturnRequestModal
+                isOpen={!!returnOrderId}
+                orderId={returnOrderId}
+                reason={returnReason}
+                image={returnImage}
+                submitting={returnSubmitting}
+                error={returnError}
+                success={returnSuccess}
+                onClose={handleCloseReturn}
+                onReasonChange={setReturnReason}
+                onFileChange={handleReturnFileChange}
+                onSubmit={handleSubmitReturn}
+                onSuccessOk={handleReturnSuccessOk}
+            />
         </main>
     );
 }
