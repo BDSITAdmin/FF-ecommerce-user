@@ -16,11 +16,9 @@ import {
     Download,
     ChevronRight,
     Clock,
-    RotateCcw,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ProfileUpdateForm from "@/components/ProfileUpdateForm";
-import OrderReturnModal from "@/components/OrderReturnModal";
 import ReturnRequestModal from "@/components/ReturnRequestModal";
 import { cancelOrder, downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
 import { getUserReturns } from "@/services/return.service";
@@ -178,8 +176,6 @@ export default function ProfilePage() {
     const [returnsPage, setReturnsPage] = useState(1);
     const [returnsTotalPages, setReturnsTotalPages] = useState(1);
     const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
-    const [showReturnModal, setShowReturnModal] = useState(false);
-    const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
 
     const userSessionKey = useMemo(() => {
         if (!rawUser) return "";
@@ -1013,17 +1009,6 @@ export default function ProfilePage() {
                                                                 </button>
                                                             )}
 
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleOpenReturn(order)}
-                                                                disabled={status !== "delivered"}
-                                                                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#0065A6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0065A6] disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#0065A6]/10 transition"
-                                                            >
-                                                                <RotateCcw size={13} />
-                                                                Return
-                                                            </button>
-
                                                             {showInvoiceButton && (
                                                                 <>
                                                                     <button
@@ -1041,10 +1026,7 @@ export default function ProfilePage() {
                                                                     {showReturnButton && (
                                                                         <button
                                                                             type="button"
-                                                                            onClick={() => {
-                                                                                setReturnOrderId(currentOrderId);
-                                                                                setShowReturnModal(true);
-                                                                            }}
+                                                                            onClick={() => handleOpenReturn(order)}
                                                                             className="mt-2 ml-2 inline-flex items-center gap-1.5 rounded-lg border border-[#0065A6] bg-[#0065A6] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005183] transition"
                                                                         >
                                                                             Return Order
@@ -1343,16 +1325,6 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
-        {/* Order Return Modal */}
-        <OrderReturnModal
-            isOpen={showReturnModal}
-            onClose={() => setShowReturnModal(false)}
-            orderId={returnOrderId || ""}
-            onSuccess={() => {
-                setOrderActionMessage("Return request submitted successfully.");
-            }}
-        />
-
         {selectedReturn && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
                 <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-black/10 max-h-[88vh] overflow-y-auto">
