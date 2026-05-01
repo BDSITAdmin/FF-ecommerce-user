@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     User,
@@ -22,6 +21,7 @@ import ProfileUpdateForm from "@/components/ProfileUpdateForm";
 import ReturnRequestModal from "@/components/ReturnRequestModal";
 import { cancelOrder, downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
 import { createReturnRequest } from "@/services/return.service";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type RootState = {
     user: { user: unknown };
@@ -126,8 +126,9 @@ const wasRecentlyRequested = (key: string, windowMs = 1200) => {
 };
 
 export default function ProfilePage() {
-    const router = useRouter();
     const rawUser = useSelector((state: RootState) => state.user.user);
+
+    useRequireAuth();
 
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
@@ -158,12 +159,6 @@ export default function ProfilePage() {
         const source = isRecord(rawUser.user) ? rawUser.user : rawUser;
         return getString(source, "id", "_id", "userId") || "authenticated";
     }, [rawUser]);
-
-    useEffect(() => {
-        if (!rawUser) {
-            router.push("/login");
-        }
-    }, [rawUser, router]);
 
     useEffect(() => {
         if (!returnOrderId) return;

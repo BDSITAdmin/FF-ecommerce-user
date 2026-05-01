@@ -33,6 +33,8 @@ export default function ReturnRequestModal({
 }: ReturnRequestModalProps) {
     if (!isOpen && !success) return null;
 
+    const successMessage = "Your return was successfully done.";
+
     return (
         <>
             {isOpen && orderId && (
@@ -104,15 +106,23 @@ export default function ReturnRequestModal({
                                 >
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#0065A6] hover:bg-[#00558d] text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                                <span
+                                    className="inline-flex"
+                                    title={success ? successMessage : undefined}
                                 >
-                                    <RotateCcw size={16} />
-                                    {submitting ? "Submitting..." : "Submit Return"}
-                                </button>
+                                    <button
+                                        type="submit"
+                                        disabled={submitting || !!success}
+                                        className="inline-flex items-center gap-2 rounded-xl bg-[#0065A6] hover:bg-[#00558d] text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        <RotateCcw size={16} />
+                                        {submitting ? "Submitting..." : "Submit Return"}
+                                    </button>
+                                </span>
                             </div>
+                            {success && (
+                                <p className="mt-3 text-xs text-black/60">{successMessage}</p>
+                            )}
                         </form>
                     </div>
                 </div>

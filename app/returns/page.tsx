@@ -2,12 +2,13 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
 import { ArrowLeft, ImagePlus, RotateCcw, ShieldAlert } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { extractOrderFromResponse, getOrderById } from "@/services/order.service";
 import { createReturnRequest } from "@/services/return.service";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type RootState = {
     user: { user: unknown };
@@ -21,9 +22,10 @@ type ReturnableItem = {
 };
 
 export default function ReturnsPage() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const user = useSelector((state: RootState) => state.user.user);
+
+    useRequireAuth();
 
     const orderId = searchParams.get("orderId") || "";
 
@@ -39,12 +41,7 @@ export default function ReturnsPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
-
-    useEffect(() => {
-        if (!user) {
-            router.push("/login");
-        }
-    }, [user, router]);
+    const [returnSuccessNotice, setReturnSuccessNotice] = useState(false);
 
     useEffect(() => {
         if (!user || !orderId) return;
@@ -118,6 +115,12 @@ export default function ReturnsPage() {
         });
     }, [selectedItem]);
 
+    useEffect(() => {
+        if (!success) {
+            setReturnSuccessNotice(false);
+        }
+    }, [success]);
+
     const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null;
         setImage(file);
@@ -127,6 +130,7 @@ export default function ReturnsPage() {
         event.preventDefault();
         setError("");
         setSuccess("");
+        setReturnSuccessNotice(false);
 
         if (!orderItemId.trim()) {
             setError("Order item id is required.");
@@ -288,19 +292,31 @@ export default function ReturnsPage() {
                         {success && <p className="text-sm text-green-700">{success}</p>}
 
                         <div className="flex items-center gap-3 pt-2">
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="inline-flex items-center gap-2 rounded-xl bg-[#0065A6] hover:bg-[#00558d] text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                            <span
+                                className="inline-flex"
+                                title={success ? "Your return was successfully done." : undefined}
+                                onClick={() => {
+                                    if (success) setReturnSuccessNotice(true);
+                                }}
                             >
-                                <RotateCcw size={16} />
-                                {submitting ? "Submitting..." : "Submit Return"}
-                            </button>
+                                <button
+                                    type="submit"
+                                    disabled={submitting || !!success}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-[#0065A6] hover:bg-[#00558d] text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                                >
+                                    <RotateCcw size={16} />
+                                    {submitting ? "Submitting..." : "Submit Return"}
+                                </button>
+                            </span>
 
                             <Link href="/orders" className="text-sm font-semibold text-black/65 hover:text-black">
                                 Cancel
                             </Link>
                         </div>
+
+                        {success && returnSuccessNotice && (
+                            <p className="text-xs text-black/60">Your return was successfully done.</p>
+                        )}
                     </form>
                 </div>
             </div>

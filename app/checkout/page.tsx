@@ -211,7 +211,12 @@ export default function CheckoutPage() {
                     <input {...form.register("email")} type="email" autoComplete="off" className="input-field" />
                   </Field>
                   <Field label="Phone" error={formErrors.phone?.message}>
-                    <input {...form.register("phone")} autoComplete="off" className="input-field" />
+                    <div className="flex">
+                      <span className="flex items-center px-3 border border-r-0 border-gray-300 bg-gray-100 rounded-l-md text-gray-700 text-sm font-medium select-none">
+                        🇮🇳 +91
+                      </span>
+                      <input {...form.register("phone")} autoComplete="off" className="input-field rounded-l-none" placeholder="Enter phone number" />
+                    </div>
                   </Field>
                 </div>
               </section>
