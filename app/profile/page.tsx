@@ -10,6 +10,7 @@ import {
     Phone,
     MapPin,
     Package,
+    RotateCcw,
     Copy,
     Check,
     Download,
@@ -18,7 +19,10 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import ProfileUpdateForm from "@/components/ProfileUpdateForm";
+import OrderReturnModal from "@/components/OrderReturnModal";
 import { cancelOrder, downloadOrderInvoice, getOrders, getShipmentById } from "@/services/order.service";
+import { getUserReturns } from "@/services/return.service";
+import { getCurrentUser } from "@/services/auth.service";
 
 type RootState = {
     user: { user: unknown };
@@ -49,6 +53,20 @@ const paymentStatusColor: Record<string, string> = {
     pending: "text-amber-700",
     failed: "text-red-700",
     refunded: "text-indigo-700",
+};
+
+const returnStatusColor: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-700",
+    approved: "bg-emerald-100 text-emerald-700",
+    rejected: "bg-rose-100 text-rose-700",
+    completed: "bg-sky-100 text-sky-700",
+};
+
+const refundStatusColor: Record<string, string> = {
+    pending: "text-amber-700",
+    processed: "text-emerald-700",
+    completed: "text-emerald-700",
+    failed: "text-rose-700",
 };
 
 const canTrackOrderStatus = (status: string) => {
@@ -136,11 +154,23 @@ export default function ProfilePage() {
     const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
     const [confirmCancelOrderId, setConfirmCancelOrderId] = useState<string>("");
     const [cancellingOrderId, setCancellingOrderId] = useState<string>("");
-    const [activeSection, setActiveSection] = useState<"info" | "orders">("info");
+    const [activeSection, setActiveSection] = useState<"info" | "orders" | "returns">("info");
     const [showUpdateProfile, setShowUpdateProfile] = useState(false);
+    const [profileData, setProfileData] = useState<Record<string, unknown> | null>(null);
+    const [profileLoading, setProfileLoading] = useState(false);
+    const [profileError, setProfileError] = useState("");
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
+    const [returnRequestedOrderIds, setReturnRequestedOrderIds] = useState<Record<string, boolean>>({});
+    const [returns, setReturns] = useState<any[]>([]);
+    const [returnsLoading, setReturnsLoading] = useState(false);
+    const [returnsError, setReturnsError] = useState("");
+    const [returnsPage, setReturnsPage] = useState(1);
+    const [returnsTotalPages, setReturnsTotalPages] = useState(1);
+    const [selectedReturn, setSelectedReturn] = useState<any | null>(null);
+    const [showReturnModal, setShowReturnModal] = useState(false);
+    const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
 
     const userSessionKey = useMemo(() => {
         if (!rawUser) return "";
@@ -150,6 +180,12 @@ export default function ProfilePage() {
         return getString(source, "id", "_id", "userId") || "authenticated";
     }, [rawUser]);
 
+    const currentUserId = useMemo(() => {
+        if (!rawUser || !isRecord(rawUser)) return "";
+        const source = isRecord(rawUser.user) ? rawUser.user : rawUser;
+        return getString(source, "id", "_id", "userId");
+    }, [rawUser]);
+
     useEffect(() => {
         if (!rawUser) {
             router.push("/login");
@@ -157,7 +193,42 @@ export default function ProfilePage() {
     }, [rawUser, router]);
 
     useEffect(() => {
-        if (!userSessionKey) return;
+        if (!userSessionKey || activeSection !== "info") return;
+
+        let cancelled = false;
+
+        const fetchProfile = async () => {
+            setProfileLoading(true);
+            setProfileError("");
+
+            try {
+                const res = await getCurrentUser();
+                const payload = res?.data?.data ?? res?.data ?? {};
+                const userFromApi = payload?.user ?? payload;
+
+                if (cancelled) return;
+
+                if (isRecord(userFromApi)) {
+                    setProfileData(userFromApi);
+                }
+            } catch {
+                if (cancelled) return;
+                setProfileError("Failed to load account information.");
+            } finally {
+                if (cancelled) return;
+                setProfileLoading(false);
+            }
+        };
+
+        fetchProfile();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [userSessionKey, activeSection]);
+
+    useEffect(() => {
+        if (!userSessionKey || activeSection !== "orders") return;
 
         let cancelled = false;
 
@@ -199,10 +270,10 @@ export default function ProfilePage() {
         return () => {
             cancelled = true;
         };
-    }, [userSessionKey, page, limit]);
+    }, [userSessionKey, page, limit, activeSection]);
 
     useEffect(() => {
-        if (!userSessionKey || orders.length === 0) {
+        if (!userSessionKey || activeSection !== "orders" || orders.length === 0) {
             setShipmentByOrderId({});
             return;
         }
@@ -263,7 +334,93 @@ export default function ProfilePage() {
         return () => {
             cancelled = true;
         };
-    }, [userSessionKey, orders]);
+    }, [userSessionKey, orders, activeSection]);
+
+    useEffect(() => {
+        if (!userSessionKey || !currentUserId || activeSection !== "orders") {
+            setReturnRequestedOrderIds({});
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchReturnLinkedOrders = async () => {
+            try {
+                const res = await getUserReturns(currentUserId, { page: 1, limit: 100 });
+                const payload = res?.data?.data ?? res?.data ?? {};
+                const rows = payload?.returns ?? payload?.docs ?? payload?.items ?? [];
+
+                if (cancelled) return;
+
+                const map: Record<string, boolean> = {};
+                if (Array.isArray(rows)) {
+                    for (const item of rows) {
+                        const orderId = String(item?.orderId ?? "").trim();
+                        if (orderId) map[orderId] = true;
+                    }
+                }
+
+                setReturnRequestedOrderIds(map);
+            } catch {
+                if (cancelled) return;
+                setReturnRequestedOrderIds({});
+            }
+        };
+
+        fetchReturnLinkedOrders();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [userSessionKey, currentUserId, activeSection]);
+
+    useEffect(() => {
+        if (!userSessionKey || !currentUserId || activeSection !== "returns") {
+            setReturns([]);
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchReturns = async () => {
+            setReturnsLoading(true);
+            setReturnsError("");
+
+            try {
+                const res = await getUserReturns(currentUserId, {
+                    page: returnsPage,
+                    limit,
+                });
+
+                const payload = res?.data?.data ?? res?.data ?? {};
+                const rows = payload?.returns ?? payload?.docs ?? payload?.items ?? [];
+
+                if (cancelled) return;
+
+                setReturns(Array.isArray(rows) ? rows : []);
+
+                const resolvedTotalPages =
+                    Number(payload?.totalPages) ||
+                    Number(payload?.pagination?.totalPages) ||
+                    Number(res?.data?.totalPages) ||
+                    1;
+
+                setReturnsTotalPages(resolvedTotalPages > 0 ? resolvedTotalPages : 1);
+            } catch {
+                if (cancelled) return;
+                setReturnsError("Failed to load return requests.");
+            } finally {
+                if (cancelled) return;
+                setReturnsLoading(false);
+            }
+        };
+
+        fetchReturns();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [userSessionKey, currentUserId, returnsPage, limit, activeSection]);
 
     if (!rawUser) return null;
 
@@ -272,13 +429,15 @@ export default function ProfilePage() {
         user = isRecord(rawUser.user) ? rawUser.user : rawUser;
     }
 
+    const resolvedUser = profileData ?? user;
+
     const fullName =
-        `${getString(user, "firstName", "first_name", "firstname", "givenName")} ${getString(user, "lastName", "last_name", "lastname", "familyName")}`.trim() ||
+        `${getString(resolvedUser, "firstName", "first_name", "firstname", "givenName")} ${getString(resolvedUser, "lastName", "last_name", "lastname", "familyName")}`.trim() ||
         "User";
-    const email = getString(user, "email");
-    const phone = getString(user, "phone", "phoneNumber", "mobile");
-    const dateOfBirth = getString(user, "dateOfBirth", "dob");
-    const gender = getString(user, "gender");
+    const email = getString(resolvedUser, "email");
+    const phone = getString(resolvedUser, "phone", "phoneNumber", "mobile");
+    const dateOfBirth = getString(resolvedUser, "dateOfBirth", "dob");
+    const gender = getString(resolvedUser, "gender");
     const avatarLetter = fullName.charAt(0).toUpperCase();
 
     const formatDate = (dateStr: string) => {
@@ -292,6 +451,15 @@ export default function ProfilePage() {
 
     const formatAmount = (val: number) =>
         `₹${Math.round(val).toLocaleString("en-IN")}`;
+
+    const formatCurrency = (value: unknown) => {
+        const amount = Number(value ?? 0);
+        if (!Number.isFinite(amount)) return "-";
+        return `₹${amount.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    };
 
     const handleTrackOrder = (order: any) => {
         const status = String(order?.status ?? order?.orderStatus ?? "").toLowerCase();
@@ -474,6 +642,29 @@ export default function ProfilePage() {
                                         <ChevronRight size={15} />
                                     </span>
                                 </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveSection("returns")}
+                                    className={`mt-2 w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition flex items-center justify-between border ${
+                                        activeSection === "returns"
+                                            ? "bg-[#0065A6]/10 text-[#0065A6] border-[#0065A6]/25"
+                                            : "text-black/70 hover:bg-gray-50 border-transparent"
+                                    }`}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <RotateCcw size={16} />
+                                        Returns
+                                    </span>
+                                    <span className="flex items-center gap-2">
+                                        {returns.length > 0 && (
+                                            <span className="bg-[#0065A6] text-white text-xs rounded-full px-2 py-0.5">
+                                                {returns.length}
+                                            </span>
+                                        )}
+                                        <ChevronRight size={15} />
+                                    </span>
+                                </button>
                             </nav>
                         </div>
                     </aside>
@@ -490,6 +681,17 @@ export default function ProfilePage() {
                                         </p>
                                     </div>
                                 </div>
+
+                                {profileLoading && (
+                                    <div className="mb-4 flex items-center gap-2 text-sm text-black/55">
+                                        <Clock size={16} className="animate-spin" />
+                                        Loading account info...
+                                    </div>
+                                )}
+
+                                {!profileLoading && profileError && (
+                                    <p className="mb-4 text-sm text-red-600">{profileError}</p>
+                                )}
 
                                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <InfoRow icon={<User size={18} />} label="Full Name" value={fullName} />
@@ -533,7 +735,7 @@ export default function ProfilePage() {
 
                                 {showUpdateProfile && (
                                     <div className="mt-6">
-                                        <ProfileUpdateForm user={user} inline />
+                                        <ProfileUpdateForm user={resolvedUser} inline />
                                     </div>
                                 )}
                             </div>
@@ -648,6 +850,8 @@ export default function ProfilePage() {
                                             const showTrackButton = canTrackOrderStatus(status);
                                             const showInvoiceButton = status === "delivered";
                                             const currentOrderId = String(orderId);
+                                            const isReturnRequested = Boolean(returnRequestedOrderIds[currentOrderId]);
+                                            const showReturnButton = status === "delivered" && !isReturnRequested;
                                             const shipmentDetails = shipmentByOrderId[currentOrderId];
                                             const estimatedDelivery = getEstimatedDeliveryLabel(order, status, shipmentDetails);
                                             const consignmentId =
@@ -705,18 +909,48 @@ export default function ProfilePage() {
                                                                 </button>
                                                             )}
 
+
                                                             {showInvoiceButton && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleDownloadInvoice(order)}
-                                                                    disabled={invoiceDownloadingOrderId === currentOrderId}
-                                                                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#7b1f13] bg-[#7b1f13] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#70462D] transition"
-                                                                >
-                                                                    <Download size={13} />
-                                                                    {invoiceDownloadingOrderId === currentOrderId
-                                                                        ? "Downloading..."
-                                                                        : "Download Invoice"}
-                                                                </button>
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDownloadInvoice(order)}
+                                                                        disabled={invoiceDownloadingOrderId === currentOrderId}
+                                                                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#7b1f13] bg-[#7b1f13] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[#70462D] transition"
+                                                                    >
+                                                                        <Download size={13} />
+                                                                        {invoiceDownloadingOrderId === currentOrderId
+                                                                            ? "Downloading..."
+                                                                            : "Download Invoice"}
+                                                                    </button>
+                                                                    {/* Return Order Button */}
+                                                                    {showReturnButton && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setReturnOrderId(currentOrderId);
+                                                                                setShowReturnModal(true);
+                                                                            }}
+                                                                            className="mt-2 ml-2 inline-flex items-center gap-1.5 rounded-lg border border-[#0065A6] bg-[#0065A6] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#005183] transition"
+                                                                        >
+                                                                            Return Order
+                                                                        </button>
+                                                                    )}
+
+                                                                    {status === "delivered" && isReturnRequested && (
+                                                                        <p className="mt-2 text-xs">
+                                                                            This order is requested for return. To know return status please{" "}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setActiveSection("returns")}
+                                                                                className="font-semibold text-[#0065A6] underline decoration-[#0065A6]/40 underline-offset-2 hover:text-[#005183]"
+                                                                            >
+                                                                                check
+                                                                            </button>
+                                                                            .
+                                                                        </p>
+                                                                    )}
+                                                                </>
                                                             )}
 
                                                             {canCancelOrder(normalizedOrderStatus) && (
@@ -836,6 +1070,133 @@ export default function ProfilePage() {
                                 )}
                             </div>
                         )}
+
+                        {activeSection === "returns" && (
+                            <div className="px-6 sm:px-8 py-8">
+                                <div className="mb-6 border-b border-black/10 pb-5">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0065A6]">Returns</p>
+                                    <h2 className="text-2xl font-extrabold text-black mt-1">Return Requests</h2>
+                                    <p className="text-sm text-black/60 mt-1">Quick view in tiles. Tap "View Details" for full return information.</p>
+                                </div>
+
+                                {returnsLoading && (
+                                    <div className="flex items-center gap-3 text-black/50 py-6">
+                                        <Clock size={18} className="animate-spin" />
+                                        Loading return requests...
+                                    </div>
+                                )}
+
+                                {!returnsLoading && returnsError && (
+                                    <p className="text-sm text-red-600">{returnsError}</p>
+                                )}
+
+                                {!returnsLoading && !returnsError && returns.length === 0 && (
+                                    <div className="text-center py-12 text-black/40 border border-dashed border-black/15 rounded-2xl bg-white">
+                                        <RotateCcw size={40} className="mx-auto mb-3 opacity-40" />
+                                        <p className="text-sm">No return requests found.</p>
+                                    </div>
+                                )}
+
+                                {!returnsLoading && !returnsError && returns.length > 0 && (
+                                    <div className="flex flex-col gap-4">
+                                        {returns.map((returnItem: any, idx: number) => {
+                                            const returnId = String(returnItem?.id ?? returnItem?._id ?? `return-${idx}`);
+                                            const orderId = String(returnItem?.orderId ?? "-");
+                                            const reason = String(returnItem?.reason ?? "-");
+                                            const createdAt = String(returnItem?.createdAt ?? "");
+                                            const status = String(returnItem?.status ?? "pending").toLowerCase();
+                                            const refundAmount = returnItem?.refundAmount;
+                                            const refundStatus = String(returnItem?.refundStatus ?? "pending").toLowerCase();
+                                            const imageUrl = String(returnItem?.imageUrl ?? "");
+
+                                            return (
+                                                <div
+                                                    key={returnId}
+                                                    className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 rounded-xl border border-black/10 bg-white hover:border-[#0065A6]/30 transition"
+                                                >
+                                                    <div className="md:col-span-2">
+                                                        {imageUrl ? (
+                                                            <img
+                                                                src={imageUrl}
+                                                                alt="Return evidence"
+                                                                className="h-24 w-24 rounded-lg border border-black/10 object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="h-24 w-24 rounded-lg border border-dashed border-black/15 bg-gray-50 flex items-center justify-center text-black/35 text-xs text-center px-2">
+                                                                No image
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="md:col-span-7">
+                                                        <p className="text-sm font-semibold text-black">
+                                                            Return <span className="text-[#0065A6]">#{returnId.slice(-8).toUpperCase()}</span>
+                                                        </p>
+                                                        <p className="text-xs text-black/55 mt-1">
+                                                            Order #{orderId.slice(-8).toUpperCase()} · {formatDate(createdAt)}
+                                                        </p>
+                                                        <p className="mt-2 text-sm text-black/75 line-clamp-2">
+                                                            {reason}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="md:col-span-3 flex md:flex-col items-start md:items-end justify-between gap-3">
+                                                        <span
+                                                            className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${
+                                                                returnStatusColor[status] ?? "bg-gray-100 text-gray-700"
+                                                            }`}
+                                                        >
+                                                            {status}
+                                                        </span>
+
+                                                        <p className="text-xs text-black/65">
+                                                            Refund Status:{" "}
+                                                            <span className={`font-semibold uppercase ${refundStatusColor[refundStatus] ?? "text-gray-700"}`}>
+                                                                {refundStatus}
+                                                            </span>
+                                                        </p>
+
+                                                        <p className="text-sm font-bold text-black">
+                                                            Refund: {formatCurrency(refundAmount)}
+                                                        </p>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedReturn(returnItem)}
+                                                            className="rounded-lg border border-[#0065A6]/30 bg-[#0065A6]/5 px-3 py-1.5 text-xs font-semibold text-[#005a93] hover:bg-[#0065A6]/10"
+                                                        >
+                                                            View Details
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+
+                                        <div className="flex items-center justify-end gap-3 pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setReturnsPage((prev) => Math.max(1, prev - 1))}
+                                                disabled={returnsPage === 1 || returnsLoading}
+                                                className="px-4 py-2 rounded-lg border border-black/15 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#0065A6]"
+                                            >
+                                                Previous
+                                            </button>
+                                            <span className="text-sm text-black/60">
+                                                Page {returnsPage} of {returnsTotalPages}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setReturnsPage((prev) => Math.min(returnsTotalPages, prev + 1))}
+                                                disabled={returnsPage >= returnsTotalPages || returnsLoading}
+                                                className="px-4 py-2 rounded-lg border border-black/15 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#0065A6]"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </section>
                 </div>
             </div>
@@ -869,7 +1230,112 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
+        {/* Order Return Modal */}
+        <OrderReturnModal
+            isOpen={showReturnModal}
+            onClose={() => setShowReturnModal(false)}
+            orderId={returnOrderId || ""}
+            onSuccess={() => {
+                setOrderActionMessage("Return request submitted successfully.");
+            }}
+        />
+
+        {selectedReturn && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4 py-6">
+                <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl border border-black/10 max-h-[88vh] overflow-y-auto">
+                    <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/10 bg-white px-5 py-4">
+                        <h3 className="text-lg font-bold text-black">
+                            Return Details #{String(selectedReturn?.id ?? "").slice(-8).toUpperCase()}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedReturn(null)}
+                            className="rounded-lg border border-black/15 px-3 py-1.5 text-xs font-semibold text-black/75 hover:bg-gray-50"
+                        >
+                            Close
+                        </button>
+                    </div>
+
+                    <div className="px-5 py-5 space-y-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                            <PopupRow label="Return Status" value={String(selectedReturn?.status ?? "-")} badgeClass={returnStatusColor[String(selectedReturn?.status ?? "").toLowerCase()]} />
+                            <PopupRow
+                                label="Refund Status"
+                                value={String(selectedReturn?.refundStatus ?? "-")}
+                                textClass={refundStatusColor[String(selectedReturn?.refundStatus ?? "").toLowerCase()]}
+                            />
+                            <PopupRow label="Refund Amount" value={formatCurrency(selectedReturn?.refundAmount)} />
+                            <PopupRow label="Reason" value={String(selectedReturn?.reason ?? "-")} />
+                            <PopupRow label="Reviewed At" value={formatDate(String(selectedReturn?.reviewedAt ?? ""))} />
+                            <PopupRow label="Review Note" value={String(selectedReturn?.reviewNote ?? "-")} />
+                        </div>
+
+                        {/* <div className="rounded-xl border border-black/10 p-4 bg-[#fafcff]">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0065A6]">Return Record</p>
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-black/75">
+                                <PopupRow label="Return ID" value={String(selectedReturn?.id ?? "-")} />
+                                <PopupRow label="Order ID" value={String(selectedReturn?.orderId ?? "-")} />
+                                <PopupRow label="Order Item ID" value={String(selectedReturn?.orderItemId ?? "-")} />
+                                <PopupRow label="User ID" value={String(selectedReturn?.userId ?? "-")} />
+                                <PopupRow label="Reviewed By" value={String(selectedReturn?.reviewedBy ?? "-")} />
+                                <PopupRow label="Created" value={formatDate(String(selectedReturn?.createdAt ?? ""))} />
+                            </div>
+                        </div> */}
+
+                        {selectedReturn?.Order && (
+                            <div className="rounded-xl border border-black/10 p-4 bg-white">
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0065A6]">Order</p>
+                                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-black/75">
+                                    <PopupRow label="Order Status" value={String(selectedReturn?.Order?.status ?? "-")} />
+                                    <PopupRow label="Total Amount" value={formatCurrency(selectedReturn?.Order?.totalAmount)} />
+                                    <PopupRow label="Payment Method" value={String(selectedReturn?.Order?.paymentMethod ?? "-")} />
+                                    <PopupRow label="Payment Status" value={String(selectedReturn?.Order?.paymentStatus ?? "-")} />
+                                    <PopupRow label="Invoice Number" value={String(selectedReturn?.Order?.invoiceNumber ?? "-")} />
+                                    <PopupRow label="Paid At" value={formatDate(String(selectedReturn?.Order?.paidAt ?? ""))} />
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedReturn?.imageUrl && (
+                            <div className="rounded-xl border border-black/10 p-4 bg-white">
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0065A6] mb-2">Uploaded Image</p>
+                                <img
+                                    src={String(selectedReturn?.imageUrl)}
+                                    alt="Return evidence"
+                                    className="h-56 w-full rounded-lg border border-black/10 object-contain bg-gray-50"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
         </main>
+    );
+}
+
+function PopupRow({
+    label,
+    value,
+    textClass,
+    badgeClass,
+}: Readonly<{
+    label: string;
+    value: string;
+    textClass?: string;
+    badgeClass?: string;
+}>) {
+    return (
+        <p className="text-sm text-black/75 break-all">
+            <span className="text-black/55">{label}:</span>{" "}
+            {badgeClass ? (
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${badgeClass}`}>
+                    {value || "-"}
+                </span>
+            ) : (
+                <span className={`font-semibold ${textClass ?? "text-black"}`}>{value || "-"}</span>
+            )}
+        </p>
     );
 }
 
