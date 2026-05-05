@@ -245,7 +245,7 @@ export default function Header() {
                   className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <UserCircle2 className="h-4 w-4" />
-                  Update Profile
+                  Dashboard
                 </Link>
 
                 <button

@@ -73,7 +73,7 @@ export default function CartPage() {
         product: item,
         productId: item.id,
         packId: item.packId,
-        packSize: item.packQuantity,
+        packSize: item.packSize ?? item.packQuantity,
         quantity: item.quantity + 1,
       })
     );
@@ -94,7 +94,7 @@ export default function CartPage() {
         product: item,
         productId: item.id,
         packId: item.packId,
-        packSize: item.packQuantity,
+        packSize: item.packSize ?? item.packQuantity,
         quantity: nextQuantity,
       })
     );
@@ -104,7 +104,8 @@ export default function CartPage() {
   const groupedItems = useMemo(() => {
     const map = new Map<string, CartItem & { quantity: number; cartKey: string }>();
     for (const item of cartItems) {
-      const cartKey = `${item.id}::${item.packId || "default"}`;
+      const variantKey = item.packId || `size-${item.packSize ?? item.packQuantity ?? 1}`;
+      const cartKey = `${item.id}::${variantKey}`;
       const existing = map.get(cartKey);
       if (existing) {
         existing.quantity += 1;
@@ -201,6 +202,7 @@ export default function CartPage() {
                 {groupedItems.map((item, index) => {
                   const itemImage = item.images?.[0] || item.image || "/assate/home-image.webp";
                   const lineTotal = Number(item.price || 0) * item.quantity;
+                  const unitsPerPack = Number(item.packSize ?? item.packQuantity ?? 1) || 1;
                   return (
                     <div
                       key={item.cartKey}
@@ -230,7 +232,7 @@ export default function CartPage() {
                         />
 
                         <p className="text-black text-sm sm:text-[16px] mt-1 sm:mr-40">
-                          Pack Size: 60 Veg Capsules (2-Month Pack)
+                          Pack Size: {unitsPerPack}
                         </p>
                         {item.packLabel && (
                           <p className="text-black text-sm mt-1">
@@ -250,6 +252,7 @@ export default function CartPage() {
                               removeFromCartAsync({
                                 productId: item.id,
                                 packId: item.packId,
+                                packSize: item.packSize ?? item.packQuantity,
                               })
                             )
                           }
@@ -285,7 +288,7 @@ export default function CartPage() {
                           </button>
                         </div>
                         <p className="text-xs text-gray-600">
-                          {item.quantity} pack(s) x {item.packQuantity || 1} units
+                          {item.quantity} pack(s) x {unitsPerPack} units
                         </p>
                       </div>
                     </div>

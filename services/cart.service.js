@@ -12,18 +12,32 @@ export const clearCart = () => {
   return api.delete("/api/v1/cart/clear");
 };
 
-export const removeCartItem = async ({ productId }) => {
+export const removeCartItem = async ({ productId, packSize }) => {
   if (!productId) throw new Error("Missing productId");
+  const parsedPackSize =
+    packSize === undefined || packSize === null ? undefined : Number(packSize);
 
   try {
-    return await api.delete(`/api/v1/cart/items/${productId}`);
+    return await api.delete(`/api/v1/cart/items/${productId}`, {
+      params:
+        parsedPackSize === undefined || Number.isNaN(parsedPackSize)
+          ? undefined
+          : { packSize: parsedPackSize },
+    });
   } catch (err) {
     const status = err?.response?.status;
     if (status !== 404 && status !== 405) throw err;
   }
 
   // Fallback: some APIs accept DELETE body instead of a param.
-  return api.delete("/api/v1/cart/items", { data: { productId } });
+  return api.delete("/api/v1/cart/items", {
+    data: {
+      productId,
+      ...(parsedPackSize === undefined || Number.isNaN(parsedPackSize)
+        ? {}
+        : { packSize: parsedPackSize }),
+    },
+  });
 };
 
 export const updateCartItemQuantity = async ({ productId, packSize, quantity }) => {
