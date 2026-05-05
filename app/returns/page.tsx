@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSelector } from "react-redux";
@@ -22,6 +22,32 @@ type ReturnableItem = {
 };
 
 export default function ReturnsPage() {
+    return (
+        <Suspense fallback={<ReturnsPageLoading />}>
+            <ReturnsPageContent />
+        </Suspense>
+    );
+}
+
+function ReturnsPageLoading() {
+    return (
+        <main className="min-h-screen bg-white text-black">
+            <Navbar />
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="rounded-3xl border border-black/10 shadow-2xl overflow-hidden bg-white">
+                    <div className="px-6 sm:px-8 py-6 bg-[#0065A6] text-white">
+                        <h1 className="text-2xl font-bold">Return Order</h1>
+                    </div>
+                    <div className="px-6 sm:px-8 py-8">
+                        <p className="text-sm text-black/60">Loading return form...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    );
+}
+
+function ReturnsPageContent() {
     const searchParams = useSearchParams();
     const user = useSelector((state: RootState) => state.user.user);
 

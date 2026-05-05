@@ -19,7 +19,7 @@ type CartItem = {
 export default function CheckoutPage() {
   const { form, isSubmitting, submitError, submitSuccess, formErrors, submitOrder, currentStep, nextStep, prevStep, shippingAddress, isValid } = useCheckoutForm();
   const selectedPaymentMethod = form.watch("paymentMethod");
-  const stepOrder = ["address", "shipping", "payment", "review"] as const;
+  const stepOrder = ["address", "payment", "review"] as const;
   const cartItems = useSelector((state: any) => state.cart.items as CartItem[]);
 
   const groupedItems = useMemo(() => {
@@ -140,6 +140,16 @@ export default function CheckoutPage() {
   const subtotal = invoiceBreakdown.totalToPay || fallbackSubtotal;
   const formatAmount = (value: number) => Math.round(value).toLocaleString("en-IN");
   const currentStepIndex = stepOrder.indexOf(currentStep);
+  const isReviewStep = currentStep === "review";
+  const customerEmail = form.watch("email");
+  const customerPhone = form.watch("phone");
+  const totalUnits = groupedItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const paymentMethodLabel = selectedPaymentMethod === "COD" ? "Cash on Delivery" : "Online Payment";
+  const invoiceActionLabel = !isReviewStep
+    ? "Complete Review Step"
+    : selectedPaymentMethod === "COD"
+      ? "Place COD Order"
+      : "Pay Online";
 
   const getPrimaryButtonLabel = () => {
     if (isSubmitting) return "Processing...";
@@ -148,6 +158,11 @@ export default function CheckoutPage() {
       return selectedPaymentMethod === "COD" ? "Place COD Order" : "Pay Online";
     }
     return "Continue";
+  };
+
+  const handlePhoneInput = (event: React.FormEvent<HTMLInputElement>) => {
+    const digitsOnly = event.currentTarget.value.replace(/\D/g, "").slice(0, 10);
+    event.currentTarget.value = digitsOnly;
   };
 
   return (
@@ -211,19 +226,17 @@ export default function CheckoutPage() {
                     <input {...form.register("email")} type="email" autoComplete="off" className="input-field" />
                   </Field>
                   <Field label="Phone" error={formErrors.phone?.message}>
-                    <div className="flex">
-                      <span className="flex items-center px-3 border border-r-0 border-gray-300 bg-gray-100 rounded-l-md text-gray-700 text-sm font-medium select-none">
-                        🇮🇳 +91
-                      </span>
-                      <input {...form.register("phone")} autoComplete="off" className="input-field rounded-l-none" placeholder="Enter phone number" />
-                    </div>
+                    <input
+                      {...form.register("phone")}
+                      autoComplete="off"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
+                      onInput={handlePhoneInput}
+                      className="input-field"
+                    />
                   </Field>
                 </div>
-              </section>
-            )}
-
-            {currentStep === "shipping" && (
-              <section className="mb-10">
                 <div className="mb-4 flex items-center gap-2">
                   <MapPin size={18} className="text-[#0065A6]" />
                   <h2 className="text-lg font-semibold text-black">Shipping Address</h2>
@@ -271,14 +284,14 @@ export default function CheckoutPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <PaymentOptionCard
                     checked={selectedPaymentMethod === "COD"}
-                    title="COD"
-                    description="Create order immediately and pay on delivery."
+                    title="Cash on Delivery"
+                    description="Place your order now and pay in cash when it is delivered to your doorstep. No online payment required."
                     onSelect={() => form.setValue("paymentMethod", "COD", { shouldValidate: true })}
                   />
                   <PaymentOptionCard
                     checked={selectedPaymentMethod === "RAZORPAY"}
                     title="ONLINE"
-                    description="Create Razorpay order, open payment popup, verify payment, then create order."
+                    description="Pay securely using UPI, cards, or net banking. Your order will be confirmed instantly after successful payment."
                     onSelect={() => form.setValue("paymentMethod", "RAZORPAY", { shouldValidate: true })}
                   />
                 </div>
@@ -292,49 +305,77 @@ export default function CheckoutPage() {
 
             {currentStep === "review" && (
               <section className="mb-10 space-y-6">
-                {/* Delivery Address Card */}
-                <div className="rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                  <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <h2 className="text-lg font-semibold text-gray-900">Delivery Address</h2>
-                    </div>
-                  </div>
-
-                  <div className="px-6 py-5">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <p className="text-gray-900 font-medium">{shippingAddress.name}</p>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        <p className="text-gray-700">{shippingAddress.phone}</p>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                        <div className="text-gray-700 space-y-0.5">
-                          <p>{shippingAddress.street}</p>
-                          <p>{shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}</p>
-                          <p>{shippingAddress.country}</p>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
+                <div className="rounded-2xl border border-[#0065A6]/20 bg-[#0065A6]/5 px-5 py-4">
+                  <h2 className="text-lg font-semibold text-black">Review Your Order Details</h2>
+                  <p className="mt-1 text-sm text-black/70">
+                    Please verify contact, address, and payment information before placing the order.
+                  </p>
                 </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
+                  <article className="rounded-2xl border border-black/10 bg-white p-5">
+                    <h3 className="text-base font-semibold text-black">Contact & Delivery</h3>
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div>
+                        <dt className="text-black/55">Full Name</dt>
+                        <dd className="font-medium text-black">{shippingAddress.name || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-black/55">Email</dt>
+                        <dd className="font-medium text-black">{customerEmail || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-black/55">Phone</dt>
+                        <dd className="font-medium text-black">{customerPhone || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-black/55">Delivery Address</dt>
+                        <dd className="font-medium text-black leading-6">
+                          {shippingAddress.street || "-"}
+                          <br />
+                          {`${shippingAddress.city || ""}${shippingAddress.city && shippingAddress.state ? ", " : ""}${shippingAddress.state || ""} ${shippingAddress.zipCode || ""}`.trim() || "-"}
+                          <br />
+                          {shippingAddress.country === "IN" ? "India" : shippingAddress.country || "-"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
 
+                  <article className="rounded-2xl border border-black/10 bg-white p-5">
+                    <h3 className="text-base font-semibold text-black">Payment & Order Summary</h3>
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div>
+                        <dt className="text-black/55">Payment Method</dt>
+                        <dd>
+                          <span className="inline-flex rounded-full bg-[#0065A6]/10 px-3 py-1 text-xs font-semibold text-[#0065A6]">
+                            {paymentMethodLabel}
+                          </span>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-black/55">Items</dt>
+                        <dd className="font-medium text-black">{groupedItems.length} products ({totalUnits} units)</dd>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                        <dt className="text-black/55">Subtotal</dt>
+                        <dd className="font-medium text-black">Rs. {formatAmount(invoiceBreakdown.mrp || subtotal)}</dd>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-black/10 pb-2">
+                        <dt className="text-black/55">Savings</dt>
+                        <dd className="font-medium text-[#0065A6]">Rs. {formatAmount(invoiceBreakdown.totalSavings || invoiceBreakdown.discount || 0)}</dd>
+                      </div>
+                      <div className="flex items-center justify-between text-base">
+                        <dt className="font-semibold text-black">Amount Payable</dt>
+                        <dd className="font-bold text-black">Rs. {formatAmount(subtotal)}</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-4 text-xs text-black/60">
+                      {selectedPaymentMethod === "COD"
+                        ? "You can pay in cash when your order is delivered."
+                        : "You will be redirected to secure payment after clicking Pay Online."}
+                    </p>
+                  </article>
+                </div>
               </section>
             )}
 
@@ -423,11 +464,14 @@ export default function CheckoutPage() {
             </div>
 
             <button
-              onClick={submitOrder}
-              disabled={isSubmitting || !form.formState.isValid}
+              onClick={() => {
+                if (!isReviewStep) return;
+                submitOrder();
+              }}
+              disabled={isSubmitting || !isReviewStep || !form.formState.isValid}
               className="w-full h-14 rounded-full bg-[#0065A6] text-white font-medium flex items-center justify-center transition-all shadow-lg shadow-[#0065A6]/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
+              {isSubmitting ? 'Processing...' : invoiceActionLabel}
             </button>
 
             {submitError && <div className="mt-4 p-4 bg-white border border-[#0065A6] text-[#0065A6] rounded-lg">{submitError}</div>}

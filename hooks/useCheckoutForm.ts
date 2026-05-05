@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,14 +20,15 @@ import {
   RazorpayPaymentResponse,
 } from "../services/razorpay-checkout";
 
-type Step = "address" | "shipping" | "payment" | "review";
+type Step = "address" | "payment" | "review";
 
-const steps: Step[] = ["address", "shipping", "payment", "review"];
+const steps: Step[] = ["address", "payment", "review"];
 
 export const useCheckoutForm = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const cartItems = useSelector((state: any) => state.cart.items as Array<Record<string, any>>);
+  const rawUser = useSelector((state: any) => state.user?.user as Record<string, any> | null);
 
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,8 +37,7 @@ export const useCheckoutForm = () => {
 
   const stepSchemas = useMemo(() => {
     return {
-      address: addressSchema,
-      shipping: shippingSchema,
+      address: addressSchema.merge(shippingSchema),
       payment: paymentSchema,
       review: z.object({}),
     } satisfies Record<Step, z.ZodTypeAny>;
@@ -66,6 +66,37 @@ export const useCheckoutForm = () => {
   });
 
   const values = form.watch();
+
+  useEffect(() => {
+    if (!rawUser || typeof rawUser !== "object") return;
+
+    const source = rawUser.user && typeof rawUser.user === "object" ? rawUser.user : rawUser;
+
+    const getString = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = source?.[key];
+        if (typeof value === "string" && value.trim()) {
+          return value.trim();
+        }
+      }
+      return "";
+    };
+
+    const firstName = getString("firstName", "first_name", "firstname", "givenName");
+    const lastName = getString("lastName", "last_name", "lastname", "familyName");
+    const email = getString("email", "emailAddress", "mail");
+
+    if (!form.getValues("firstName") && firstName) {
+      form.setValue("firstName", firstName, { shouldDirty: false, shouldValidate: true });
+    }
+    if (!form.getValues("lastName") && lastName) {
+      form.setValue("lastName", lastName, { shouldDirty: false, shouldValidate: true });
+    }
+    if (!form.getValues("email") && email) {
+      form.setValue("email", email, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [form, rawUser]);
+
   const isStepValid = useMemo(() => {
     const result = stepSchemas[currentStep].safeParse(values);
     return result.success;
