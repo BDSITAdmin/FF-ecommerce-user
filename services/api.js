@@ -1,13 +1,10 @@
 import axios from "axios";
 
-// const BASE_URL = "http://localhost:3000";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ||  API_BASE_URL;
-
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
 });
+
 
 /* ======================================================
   REFRESH CONTROL
@@ -32,7 +29,7 @@ const forceLogout = async () => {
 
   try {
     await axios.post(
-      `${BASE_URL}/api/v1/auth/logout`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/logout`,
       {},
       { withCredentials: true }
     );
@@ -121,7 +118,7 @@ api.interceptors.response.use(
 
       try {
         const res = await axios.post(
-          `${API_BASE_URL}/api/v1/auth/refresh`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }
         );
