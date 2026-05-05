@@ -1,11 +1,58 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth } from "../../hooks/useAuth";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Image from "next/image";
-import { Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import Script from "next/script";
+import logo from "@/public/assate/Layer_1 (1).svg";
+import google from "@/public/assate/google-icon.png";
+import Link from "next/link";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import ForgotPassword from "@/components/ForgotPassword";
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleButtonConfiguration = {
+  type?: "standard" | "icon";
+  theme?: "outline" | "filled_blue" | "filled_black";
+  size?: "large" | "medium" | "small";
+  text?: "signin_with" | "signup_with" | "continue_with" | "signin";
+  shape?: "rectangular" | "pill" | "circle" | "square";
+  width?: number;
+  logo_alignment?: "left" | "center";
+};
+
+type GoogleAccountsId = {
+  initialize: (config: {
+    client_id: string;
+    callback: (response: GoogleCredentialResponse) => void;
+  }) => void;
+  renderButton: (
+    parent: HTMLElement,
+    options: GoogleButtonConfiguration
+  ) => void;
+};
+
+declare global {
+  var google:
+    | {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    }
+    | undefined;
+
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: GoogleAccountsId;
+      };
+    };
+  }
+}
 
 type LoginForm = {
   email: string;
@@ -19,29 +66,74 @@ type FormErrors = {
 };
 
 export default function Login() {
-  const { login, isLoading } = useAuth();
+  const { login, loginWithGoogle, isLoading } = useAuth();
   const router = useRouter();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const isGoogleConfigured = Boolean(googleClientId);
 
-  const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
+  const [form, setForm] = useState<LoginForm>({
+    email: "",
+    password: "",
+  });
+
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+
+  const getLoginErrorMessage = (error: unknown): string => {
+    if (typeof error === "object" && error !== null && "response" in error) {
+      const response = error.response;
+
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "status" in response &&
+        (response.status === 400 || response.status === 401)
+      ) {
+        return "Invalid email or password. Please try again.";
+      }
+
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        "data" in response &&
+        typeof response.data === "object" &&
+        response.data !== null &&
+        "message" in response.data &&
+        typeof response.data.message === "string"
+      ) {
+        return response.data.message;
+      }
+    }
+
+    if (error instanceof Error && error.message) {
+      if (
+        error.message.toLowerCase().includes("request failed with status code")
+      ) {
+        return "Invalid email or password. Please try again.";
+      }
+
+      return error.message;
+    }
+
+    return "Login failed. Please try again.";
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Email validation
     if (!form.email) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(form.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
-    // Password validation
     if (!form.password) {
       newErrors.password = "Password is required";
-    } else if (form.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (form.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     setErrors(newErrors);
@@ -53,15 +145,12 @@ export default function Login() {
 
     try {
       setErrors({});
+
       await login(form);
-      router.push("/"); // Redirect to homepage after successful login
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Invalid email or password. Please try again.";
+      router.push("/");
+    } catch (error) {
       setErrors({
-        general: message,
+        general: getLoginErrorMessage(error),
       });
     }
   };
@@ -71,242 +160,229 @@ export default function Login() {
     await handleLogin();
   };
 
+  const handleGoogleCredential = useEffectEvent(async (credential: string) => {
+    try {
+      setErrors({});
+      await loginWithGoogle(credential);
+      router.push("/");
+    } catch (error) {
+      setErrors({
+        general:
+          error instanceof Error
+            ? error.message
+            : "Google sign-in failed",
+      });
+    }
+  });
+
+  useEffect(() => {
+    const googleAccountsId = globalThis.google?.accounts?.id;
+
+    if (!isGoogleScriptLoaded || !googleClientId || !googleButtonRef.current || !googleAccountsId) {
+      return;
+    }
+
+    googleButtonRef.current.innerHTML = "";
+
+    googleAccountsId.initialize({
+      client_id: googleClientId,
+      callback: ({ credential }) => {
+        if (!credential) {
+          setErrors({
+            general: "Google sign-in did not return a credential.",
+          });
+          return;
+        }
+
+        void handleGoogleCredential(credential);
+      },
+    });
+
+    googleAccountsId.renderButton(googleButtonRef.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "pill",
+      logo_alignment: "left",
+      width: googleButtonRef.current.offsetWidth,
+    });
+  }, [googleClientId, isGoogleScriptLoaded]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-lime-100 flex items-center justify-center p-4 md:p-8">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl border border-green-100 bg-white">
-        <div className="hidden md:flex flex-col justify-between bg-gradient-to-br from-emerald-600 to-green-700 p-10 text-white">
-          <div>
-            <p className="inline-block bg-white/20 px-4 py-1 rounded-full text-sm font-medium">
-              User Login
-            </p>
-            <h2 className="mt-6 text-4xl font-extrabold leading-tight">
-              Welcome Back to Your Shopping Space
-            </h2>
-            <p className="mt-4 text-emerald-100 text-base">
-              Sign in to view your orders, manage your cart, and continue shopping.
-            </p>
-          </div>
+    <section className="bg-white sm:bg-[#0065A4]">
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={() => setIsGoogleScriptLoaded(true)}
+        onError={() => {
+          setErrors({
+            general: "Failed to load Google sign-in. Please try again.",
+          });
+        }}
+      />
+      <div className="relative flex flex-col lg:flex-row sm:min-h-screen">
 
-          <div className="relative mt-8 flex justify-center">
-            <Image
-              src="/assate/home-image-removebg-preview.png"
-              alt="User login illustration"
-              width={420}
-              height={420}
-              className="w-full max-w-sm h-auto drop-shadow-2xl"
-              priority
-            />
-          </div>
+        {/* BACKGROUND IMAGE */}
+        <div
+          className="absolute inset-0 bg-no-repeat bg-contain bg-center lg:block hidden"
+          style={{ backgroundImage: "url('/assate/login-bg.png')" }}
+        />
 
-          <p className="text-sm text-emerald-100">
-            Secure access for registered users.
-          </p>
-        </div>
+        {/* LOGIN PANEL */}
+        <div className="relative w-full lg:w-[60%] bg-white flex items-center justify-center px-4 sm:px-6 py-10">
 
-        <div className="p-6 md:p-10">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-600 rounded-2xl shadow-lg mb-4">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col items-center gap-6 w-full"
+          >
+
+            {/* Logo */}
+            <div className="text-center px-4 sm:px-6">
+              {/* LOGO */}
+              <div className="mx-auto w-30 sm:w-40 md:w-50">
+                <Image
+                  src={logo}
+                  alt="logo"
+                  width={200}
+                  height={80}
+                  priority
+                  className="w-full h-auto object-contain"
                 />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Welcome Back
-            </h1>
-            <p className="text-gray-600">Please enter your details to sign in</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-green-100 shadow-lg p-8">
-          {/* General Error Message */}
-          {errors.general && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {errors.general}
-            </div>
-          )}
-
-          {/* Email Field */}
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-semibold mb-2">
-              Email Address
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
               </div>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className={`w-full pl-10 pr-3 py-3 border ${errors.email ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200`}
-                value={form.email}
-                onChange={(e) => {
-                  setForm({ ...form, email: e.target.value });
-                  if (errors.email) setErrors({ ...errors, email: undefined });
-                }}
-                disabled={isLoading}
-              />
+
+              {/* HEADING */}
+              <h2 className="font-light mt-3 sm:mt-4 text-sm sm:text-xl md:text-[28px] text-gray-700">
+                Login to your account
+              </h2>
             </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600 flex items-center">
-                <svg
-                  className="w-4 h-4 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {errors.email}
-              </p>
+
+            {/* General Error */}
+            {errors.general && (
+              <p className="text-red-500 text-sm">{errors.general}</p>
             )}
-          </div>
 
-          {/* Password Field */}
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-semibold mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+            {/* Email */}
+            <div className="flex flex-col gap-2 w-full max-w-118">
+              <label className="font-semibold text-sm sm:text-[16px]">
+                Email
+              </label>
+
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full h-12 sm:h-14 pl-12 pr-4 rounded-lg border border-[#7697AC] focus:ring-2 focus:ring-[#7697AC] outline-none"
+                />
               </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                className={`w-full pl-10 pr-10 py-3 border ${errors.password ? 'border-red-500' : 'border-gray-300'
-                  } rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition duration-200`}
-                value={form.password}
-                onChange={(e) => {
-                  setForm({ ...form, password: e.target.value });
-                  if (errors.password) setErrors({ ...errors, password: undefined });
-                }}
-                disabled={isLoading}
-              />
+
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div className="flex flex-col gap-2 w-full max-w-118">
+
+              <div className="flex justify-between text-sm sm:text-[16px] font-semibold">
+                <label>Password</label>
+
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPasswordOpen(true)}
+                  className="text-[#0065A6] hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                  placeholder="********"
+                  className="w-full h-12 sm:h-14 pl-12 pr-12 rounded-lg border border-[#7697AC] focus:ring-2 focus:ring-[#7697AC] outline-none"
+                />
+
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {errors.password && (
+                <p className="text-red-500 text-sm">{errors.password}</p>
+              )}
+
+            </div>
+
+            {/* Sign In */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full max-w-118 h-12 sm:h-15 bg-[#0065A6] text-white text-base sm:text-[20px] font-semibold sm:mt-3 flex items-center justify-center rounded-full hover:bg-[#023954] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
+            </button>
+
+            {/* Google Login */}
+            <div className="relative w-full max-w-118 h-12 sm:h-14">
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+                onClick={() => {
+                  if (!isGoogleConfigured) {
+                    setErrors({
+                      general: "NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured.",
+                    });
+                  }
+                }}
+                className={`${isGoogleConfigured ? "pointer-events-none" : ""} w-full h-full border border-[#0065A6] rounded-full flex items-center justify-center gap-2 disabled:opacity-60`}
               >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                ) : (
-                  <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                )}
+                <Image src={google} alt="google" width={24} height={24} />
+                Sign in with <span className="font-semibold">Google</span>
               </button>
+
+              {isGoogleConfigured && (
+                <div
+                  ref={googleButtonRef}
+                  className="absolute inset-0 z-10 overflow-hidden rounded-full opacity-0"
+                />
+              )}
             </div>
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-600 flex items-center">
-                <svg
-                  className="w-4 h-4 mr-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {errors.password}
-              </p>
-            )}
-          </div>
 
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between mb-6">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <span className="ml-2 text-sm text-gray-600">Remember me</span>
-            </label>
-            <Link
-              href="/forgot-password"
-              className="text-sm text-emerald-600 hover:text-emerald-800 hover:underline transition duration-200"
-            >
-              Forgot password?
-            </Link>
-          </div>
+            {/* Signup */}
+            <p className="text-center text-sm sm:text-[16px] font-semibold">
+              Don’t have an account?{" "}
+              <Link href="/register" className="text-[#0065A6] underline">
+                Sign up
+              </Link>
+            </p>
 
-          {/* Login Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold 
-              ${isLoading
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-emerald-700 hover:shadow-lg transform hover:scale-[1.02]'
-              } transition-all duration-200 flex items-center justify-center`}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign in'
-            )}
-          </button>
+          </form>
 
-          {/* Sign Up Link */}
-          <p className="text-center mt-6 text-gray-600">
-            Don't have an account?{' '}
-            <Link
-              href="/register"
-              className="text-emerald-600 hover:text-emerald-800 font-semibold hover:underline transition duration-200"
-            >
-              Sign up
-            </Link>
-          </p>
-        </form>
-
-        {/* Footer */}
-        <p className="text-center mt-8 text-sm text-gray-600">
-          By signing in, you agree to our{' '}
-          <Link href="/terms" className="text-emerald-600 hover:underline font-medium">
-            Terms
-          </Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="text-emerald-600 hover:underline font-medium">
-            Privacy Policy
-          </Link>
-        </p>
         </div>
       </div>
-    </div>
+
+      <ForgotPassword
+        isOpen={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        defaultEmail={form.email}
+      />
+    </section>
   );
 }

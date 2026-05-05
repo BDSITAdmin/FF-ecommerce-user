@@ -24,7 +24,7 @@ export default function ProductFilters({
   setSearch,
   maxPrice,
   setMaxPrice,
-}: Props) {
+}: Readonly<Props>) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm">
       {/* Search */}
