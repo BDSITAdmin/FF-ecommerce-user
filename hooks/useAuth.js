@@ -74,6 +74,9 @@ export const useAuth = () => {
 
     if (currentUser) {
       dispatch(setUser(currentUser));
+      try {
+        localStorage.setItem("user", JSON.stringify(currentUser));
+      } catch { }
     }
 
     return res;

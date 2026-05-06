@@ -3,6 +3,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
 });
 /* ======================================================
@@ -28,6 +29,7 @@ const forceLogout = async () => {
 
   try {
     await axios.post(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/logout`,
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/logout`,
       {},
       { withCredentials: true }
@@ -117,6 +119,7 @@ api.interceptors.response.use(
 
       try {
         const res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`,
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }

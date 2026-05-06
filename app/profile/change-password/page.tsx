@@ -2,11 +2,11 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { ArrowLeft, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type RootState = {
     user: { user: unknown };
@@ -19,9 +19,10 @@ type PasswordForm = {
 };
 
 export default function ChangePasswordPage() {
-    const router = useRouter();
     const { changePasswordAction, isLoading } = useAuth();
     const user = useSelector((state: RootState) => state.user.user);
+
+    useRequireAuth();
 
     const [form, setForm] = useState<PasswordForm>({
         currentPassword: "",
@@ -33,12 +34,6 @@ export default function ChangePasswordPage() {
     const [showCurrent, setShowCurrent] = useState(false);
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-
-    useEffect(() => {
-        if (!user) {
-            router.push("/login");
-        }
-    }, [user, router]);
 
     const onChange = (key: keyof PasswordForm, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }));

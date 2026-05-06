@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { ArrowLeft, ChevronRight, Package, Clock3 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { getOrders } from "@/services/order.service";
+import { cancelOrder, getOrders } from "@/services/order.service";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type RootState = {
     user: { user: unknown };
@@ -22,22 +22,20 @@ const statusColor: Record<string, string> = {
 };
 
 export default function OrdersPage() {
-    const router = useRouter();
     const user = useSelector((state: RootState) => state.user.user);
+
+    useRequireAuth();
 
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const [confirmOrderId, setConfirmOrderId] = useState<string>("");
+    const [cancellingId, setCancellingId] = useState<string>("");
 
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
-
-    useEffect(() => {
-        if (!user) {
-            router.push("/login");
-        }
-    }, [user, router]);
 
     useEffect(() => {
         if (!user) return;
@@ -89,6 +87,51 @@ export default function OrdersPage() {
         return `₹${Number.isFinite(amount) ? Math.round(amount).toLocaleString("en-IN") : "0"}`;
     };
 
+    const normalizeStatus = (value: unknown) => {
+        return String(value ?? "")
+            .toLowerCase()
+            .replace(/[_\s-]+/g, "")
+            .trim();
+    };
+
+    const canCancelOrder = (orderStatus: string, paymentStatus: string) => {
+        const allowed = ["paid", "pending", "confirmed"];
+        return allowed.includes(orderStatus) || allowed.includes(paymentStatus);
+    };
+
+    const handleOpenCancelConfirm = (orderId: string) => {
+        setConfirmOrderId(orderId);
+    };
+
+    const handleCancelOrder = async () => {
+        if (!confirmOrderId || cancellingId) return;
+
+        setCancellingId(confirmOrderId);
+        setError("");
+
+        try {
+            await cancelOrder(confirmOrderId);
+
+            setOrders((prev) =>
+                prev.map((order) => {
+                    const rowId = String(order?.id ?? order?._id ?? order?.orderId ?? "");
+                    if (rowId !== confirmOrderId) return order;
+                    return {
+                        ...order,
+                        status: "cancelled",
+                    };
+                })
+            );
+
+            setSuccessMessage("Cancelled successfully");
+            setConfirmOrderId("");
+        } catch {
+            setError("Unable to cancel this order right now.");
+        } finally {
+            setCancellingId("");
+        }
+    };
+
     if (!user) return null;
 
     return (
@@ -113,6 +156,12 @@ export default function OrdersPage() {
                     </div>
 
                     <div className="p-6 sm:p-8">
+                        {!!successMessage && (
+                            <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                                {successMessage}
+                            </div>
+                        )}
+
                         {loading && (
                             <div className="flex items-center gap-3 text-black/55 py-4">
                                 <Clock3 size={18} className="animate-spin" />
@@ -139,7 +188,9 @@ export default function OrdersPage() {
                             <div className="space-y-4">
                                 {orders.map((order: any, index: number) => {
                                     const id = order?.id ?? order?._id ?? order?.orderId ?? String(index);
-                                    const status = String(order?.status ?? order?.paymentStatus ?? "pending").toLowerCase();
+                                    const orderStatus = normalizeStatus(order?.status);
+                                    const paymentStatus = normalizeStatus(order?.paymentStatus);
+                                    const status = orderStatus || paymentStatus || "pending";
                                     const createdAt = order?.createdAt ?? order?.created_at ?? "";
                                     const total = order?.totalAmount ?? order?.total ?? order?.amount ?? 0;
                                     let products: any[] = [];
@@ -166,6 +217,21 @@ export default function OrdersPage() {
                                             </div>
 
                                             <div className="flex items-center gap-3 sm:gap-4">
+                                                {canCancelOrder(orderStatus, paymentStatus) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(event) => {
+                                                            event.preventDefault();
+                                                            event.stopPropagation();
+                                                            handleOpenCancelConfirm(String(id));
+                                                        }}
+                                                        disabled={cancellingId === String(id)}
+                                                        className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        {cancellingId === String(id) ? "Cancelling..." : "Cancel"}
+                                                    </button>
+                                                )}
+
                                                 <span
                                                     className={`text-xs font-medium px-3 py-1 rounded-full capitalize ${statusColor[status] ?? "bg-gray-100 text-gray-700"
                                                         }`}
@@ -205,6 +271,36 @@ export default function OrdersPage() {
                     </div>
                 </div>
             </div>
+
+            {confirmOrderId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                        <h2 className="text-lg font-bold text-black">Cancel order?</h2>
+                        <p className="mt-2 text-sm text-black/65">
+                            Are you sure you want to cancel this order? This action cannot be undone.
+                        </p>
+
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmOrderId("")}
+                                disabled={!!cancellingId}
+                                className="rounded-lg border border-black/15 px-4 py-2 text-sm font-medium text-black hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                No
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCancelOrder}
+                                disabled={!!cancellingId}
+                                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {cancellingId ? "Cancelling..." : "Yes, Cancel"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

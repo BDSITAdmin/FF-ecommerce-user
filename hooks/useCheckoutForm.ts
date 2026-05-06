@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 
 import { clearCartAsync } from "../store/cartSlice";
@@ -20,13 +20,15 @@ import {
   RazorpayPaymentResponse,
 } from "../services/razorpay-checkout";
 
-type Step = "address" | "shipping" | "payment" | "review";
+type Step = "address" | "payment" | "review";
 
-const steps: Step[] = ["address", "shipping", "payment", "review"];
+const steps: Step[] = ["address", "payment", "review"];
 
 export const useCheckoutForm = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const cartItems = useSelector((state: any) => state.cart.items as Array<Record<string, any>>);
+  const rawUser = useSelector((state: any) => state.user?.user as Record<string, any> | null);
 
   const [currentStep, setCurrentStep] = useState<Step>("address");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,8 +37,7 @@ export const useCheckoutForm = () => {
 
   const stepSchemas = useMemo(() => {
     return {
-      address: addressSchema,
-      shipping: shippingSchema,
+      address: addressSchema.merge(shippingSchema),
       payment: paymentSchema,
       review: z.object({}),
     } satisfies Record<Step, z.ZodTypeAny>;
@@ -65,6 +66,37 @@ export const useCheckoutForm = () => {
   });
 
   const values = form.watch();
+
+  useEffect(() => {
+    if (!rawUser || typeof rawUser !== "object") return;
+
+    const source = rawUser.user && typeof rawUser.user === "object" ? rawUser.user : rawUser;
+
+    const getString = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = source?.[key];
+        if (typeof value === "string" && value.trim()) {
+          return value.trim();
+        }
+      }
+      return "";
+    };
+
+    const firstName = getString("firstName", "first_name", "firstname", "givenName");
+    const lastName = getString("lastName", "last_name", "lastname", "familyName");
+    const email = getString("email", "emailAddress", "mail");
+
+    if (!form.getValues("firstName") && firstName) {
+      form.setValue("firstName", firstName, { shouldDirty: false, shouldValidate: true });
+    }
+    if (!form.getValues("lastName") && lastName) {
+      form.setValue("lastName", lastName, { shouldDirty: false, shouldValidate: true });
+    }
+    if (!form.getValues("email") && email) {
+      form.setValue("email", email, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [form, rawUser]);
+
   const isStepValid = useMemo(() => {
     const result = stepSchemas[currentStep].safeParse(values);
     return result.success;
@@ -113,6 +145,71 @@ export const useCheckoutForm = () => {
       ""
     );
   }, []);
+
+  const extractProductId = useCallback((value: unknown) => {
+    if (!value || typeof value !== "object") return "";
+
+    const record = value as Record<string, any>;
+    const data =
+      record.data && typeof record.data === "object"
+        ? (record.data as Record<string, any>)
+        : null;
+
+    const order =
+      record.order ??
+      data?.order ??
+      record;
+
+    const items =
+      order?.items ??
+      data?.items ??
+      record.items ??
+      [];
+
+    if (!Array.isArray(items) || !items.length) return "";
+
+    const firstItem = items[0] ?? {};
+
+    return String(
+      firstItem.productId ??
+      firstItem.product?.id ??
+      firstItem.product?._id ??
+      firstItem.id ??
+      ""
+    );
+  }, []);
+
+  const firstCartProductId = useMemo(() => {
+    const firstItem = cartItems?.[0] as Record<string, any> | undefined;
+    if (!firstItem) return "";
+
+    return String(
+      firstItem.id ??
+      firstItem._id ??
+      firstItem.productId ??
+      firstItem.product?.id ??
+      firstItem.product?._id ??
+      ""
+    );
+  }, [cartItems]);
+
+  const redirectToProductDetails = useCallback(
+    (candidateProductId?: string) => {
+      const resolvedProductId = String(candidateProductId || "").trim() || firstCartProductId;
+
+      if (resolvedProductId) {
+        window.setTimeout(() => {
+          router.replace(`/products/${resolvedProductId}`);
+        }, 1200);
+        return;
+      }
+
+      window.setTimeout(() => {
+        router.replace("/products");
+      }, 1200);
+    },
+    [firstCartProductId, router]
+  );
 
   // ─── STEP NAVIGATION ─────────────────
 
@@ -172,11 +269,13 @@ export const useCheckoutForm = () => {
 
         // ✅ COD FLOW
         if (data.paymentMethod === "COD") {
-          setSubmitSuccess("Order placed successfully");
+          const createdProductId =
+            extractProductId(session) ||
+            extractProductId(res?.data);
+
+          setSubmitSuccess("Order placed successfully! Redirecting to product details...");
           dispatch(clearCartAsync());
-          if (createdOrderId) {
-            router.push(`/order-success?orderId=${createdOrderId}`);
-          }
+          redirectToProductDetails(createdProductId);
           return;
         }
 
@@ -214,18 +313,25 @@ export const useCheckoutForm = () => {
           extractOrderId(verifyRes?.data?.data) ||
           createdOrderId;
 
-        setSubmitSuccess("Payment successful ✅");
+        const paidProductId =
+          extractProductId(verifyRes?.data) ||
+          extractProductId(verifyRes?.data?.data) ||
+          extractProductId(session) ||
+          extractProductId(res?.data);
+
+        setSubmitSuccess("Payment successful! Redirecting to product details...");
         dispatch(clearCartAsync());
-        if (verifiedOrderId) {
-          router.push(`/order-success?orderId=${verifiedOrderId}`);
-        }
+
+        // Keep order id extraction for compatibility with existing API payload shapes.
+        void verifiedOrderId;
+        redirectToProductDetails(paidProductId);
       } catch (error: any) {
         setSubmitError(error?.message || "Something went wrong");
       } finally {
         setIsSubmitting(false);
       }
     },
-    [dispatch, extractOrderId, isSubmitting, router, shippingAddress]
+    [dispatch, extractOrderId, extractProductId, isSubmitting, redirectToProductDetails, shippingAddress]
   );
 
   const submitOrder = useMemo(() => form.handleSubmit(onSubmit), [form, onSubmit]);

@@ -7,3 +7,15 @@ export const createReturnRequest = (payload: FormData) => {
         },
     });
 };
+
+export const getUserReturns = (
+    userId: string,
+    params?: { page?: number; limit?: number }
+) => {
+    return api.get(`/api/v1/returns/user/${userId}`, {
+        params: {
+            page: params?.page ?? 1,
+            limit: params?.limit ?? 10,
+        },
+    });
+};
