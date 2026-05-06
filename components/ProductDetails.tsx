@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,6 +9,14 @@ import Navbar from "./Navbar";
 import Accordion from "./Accordion";
 import IxanBottle from "@/public/assate/IxanBottle.png";
 import IxanLogo from "@/public/assate/ixan-logo.svg";
+import ProtectIcon from "@/public/icons/protect-icon.svg";
+import NuclieIcon from "@/public/icons/nuclie-icon.svg";
+import ResearchIcon from "@/public/icons/research-icon.svg";
+import ApproveIcon from "@/public/icons/approve-icon.svg";
+import LeftArrow from "@/public/assate/left-arrow.svg";
+import RightArrow from "@/public/assate/right-arrow.svg";
+import  EyeIcon  from "@/public/assate/eye-icon.svg";
+
 
 
 
@@ -52,6 +59,17 @@ type ProductPack = {
   isActive: boolean;
   sortOrder?: number;
   pricing?: ProductPackPricing;
+};
+
+type CartItem = {
+  id?: string | number;
+  packId?: string;
+};
+
+type ThunkLikeResult = {
+  meta?: {
+    requestStatus?: string;
+  };
 };
 
 const ingredients = [
@@ -283,9 +301,9 @@ const normalizeProductId = (value: ProductDetailsProps["productId"]) => {
 
 export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
-  const dispatch = useDispatch<any>();
+  const dispatch = useDispatch();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
-  const cartItems = useSelector((state: { cart: { items: any[] } }) => state.cart.items || []);
+  const cartItems = useSelector((state: { cart: { items: CartItem[] } }) => state.cart.items || []);
   const [product, setProduct] = useState<Product | null>(null);
   const [isProductLoading, setIsProductLoading] = useState(true);
   const [productLoadError, setProductLoadError] = useState("");
@@ -362,7 +380,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   useEffect(() => {
     const target = thumbnailRefs.current[selectedIndex];
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     }
   }, [selectedIndex]);
 
@@ -375,6 +393,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     if (galleryImages.length <= 1) return;
     setSelectedIndex((prev) => (prev === galleryImages.length - 1 ? 0 : prev + 1));
   };
+
+  const handleThumbnailClick = (index: number) => {
+  setSelectedIndex(index);
+};
 
   const selectedVariantKey = useMemo(
     () => `${String(product?.id ?? "")}::${String(selectedPack?.id || "default")}`,
@@ -416,8 +438,16 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
     setIsAddingToCart(true);
     try {
-      const action = await dispatch((addToCartAsync as any)({ product: productForCart, quantity }));
-      if (action?.meta?.requestStatus === "fulfilled") {
+      const action = (await dispatch(
+        addToCartAsync({ product: productForCart, quantity }) as never
+      )) as unknown;
+
+      const isFulfilled =
+        typeof action === "object" &&
+        action !== null &&
+        (action as ThunkLikeResult).meta?.requestStatus === "fulfilled";
+
+      if (isFulfilled) {
         const detail = {
           name: productForCart.name,
           image: productForCart.images?.[0] || productForCart.image || "",
@@ -435,6 +465,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   };
 
   const selectedPackQuantity = Math.max(1, Number(selectedPack?.quantity || 1));
+  const baseCapsulesPerUnit = 60;
+  const capsulesPerUnit = selectedPackQuantity * baseCapsulesPerUnit;
+  const capsulesPerMonth = 30;
+  const packDurationMonths = Math.max(1, Math.ceil(capsulesPerUnit / capsulesPerMonth));
   const displayPrice = Number(selectedPack?.pricing?.mrp ?? product?.price ?? 0);
   const totalUnits = quantity * selectedPackQuantity;
 
@@ -454,200 +488,249 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     <div className="font-figtree ">
       <Navbar />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12  sm:py-14 lg:py-20 ">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 sm:py-14 lg:py-20">
+  {/* LEFT: IMAGE GALLERY */}
+  <section className="w-full">
+    {/* MAIN IMAGE */}
+    <div className="flex justify-center">
+      <Image
+        src={galleryImages?.[selectedIndex] || IxanBottle.src}
+        alt={product?.name || "Product Image"}
+        width={600}
+        height={600}
+        priority
+        className="w-full max-w-md mx-auto lg:max-w-full object-contain"
+      />
+    </div>
 
-        {/* LEFT: IMAGE GALLERY */}
-        <div className="w-full">
-
-          {/* MAIN IMAGE */}
-          <img
-            src={galleryImages[selectedIndex] || IxanBottle.src}
-            alt={product.name}
-            className="w-full max-w-md mx-auto lg:max-w-full object-contain"
-          />
+    {/* THUMBNAILS */}
+    {galleryImages?.length > 1 && (
+      <div className="mt-4">
+        <div className="flex items-center justify-center gap-3">
+          {/* PREV BUTTON */}
+          <button
+            type="button"
+            onClick={handlePrevImage}
+            aria-label="Previous image"
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+          >
+            <Image
+              src={LeftArrow}
+              alt="Previous"
+              width={16}
+              height={16}
+            />
+          </button>
 
           {/* THUMBNAILS */}
-          {galleryImages.length > 1 && (
-            <div className="mt-4">
+          <nav className="w-[240px] sm:w-[360px] md:w-[460px] lg:w-[520px] overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-nowrap justify-start gap-2 sm:gap-3 w-max">
+            {galleryImages.map((img, index) => {
+              const isSelected = selectedIndex === index;
 
-              <div className="flex items-center justify-center gap-3">
-
-                {/* PREV BUTTON */}
+              return (
                 <button
-                  onClick={handlePrevImage}
-                  className="h-8 w-8 flex items-center justify-center"
+                  key={img}
+                  ref={(el) => {
+                    thumbnailRefs.current[index] = el;
+                  }}
+                  type="button"
+                  onClick={() => handleThumbnailClick(index)}
+                  aria-label={`View image ${index + 1}`}
+                  className={`rounded border-2 shrink-0 transition ${isSelected
+                    ? "border-[#2477DC]"
+                    : "border-transparent hover:border-gray-300"
+                    }`}
                 >
-                  <img src="/assate/left arrow.svg" alt="Previous" className="h-4 w-4" />
-                </button>
-
-                {/* THUMBNAILS */}
-                <div className="flex gap-2 sm:gap-3 overflow-x-auto px-1">
-                  {galleryImages.map((img, index) => (
-                    <button
-                      key={index}
-                      ref={(el) => {
-                        thumbnailRefs.current[index] = el;
-                      }}
-                      type="button"
-                      onClick={() => setSelectedIndex(index)}
-                      className={`rounded border-2 shrink-0 ${selectedIndex === index
-                        ? "border-[#2477DC]"
-                        : "border-transparent"
-                        }`}
-                    >
-                      <img
-                        src={img}
-                        alt={`thumb-${index}`}
-                        className="h-16 w-12 sm:h-[121.85px] sm:w-[95.28px] object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-
-                {/* NEXT BUTTON */}
-                <button
-                  onClick={handleNextImage}
-                  className="h-8 w-8 flex items-center justify-center"
-                >
-                  <img src="/assate/right arrow.svg" alt="Next" className="h-4 w-4" />
-                </button>
-
-              </div>
-
-              {/* DOTS */}
-              <div className="mt-3 flex justify-center gap-2">
-                {galleryImages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedIndex(index)}
-                    className={`h-1.5 w-1.5 rounded-full ${selectedIndex === index
-                      ? "bg-[#2477DC]"
-                      : "bg-gray-300"
-                      }`}
+                  <Image
+                    src={img}
+                    alt={`Thumbnail ${index + 1}`}
+                    width={95}
+                    height={122}
+                    className="h-16 w-12 sm:h-[121.85px] sm:w-[95.28px] object-cover"
                   />
-                ))}
-              </div>
-
+                </button>
+              );
+            })}
             </div>
-          )}
+          </nav>
+
+          {/* NEXT BUTTON */}
+          <button
+            type="button"
+            onClick={handleNextImage}
+            aria-label="Next image"
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+          >
+            <Image
+              src={RightArrow}
+              alt="Next"
+              width={16}
+              height={16}
+            />
+          </button>
         </div>
 
-        {/* RIGHT: PRODUCT DETAILS */}
-        <div className=" mt-4 pb-4 sm:mt-12 px-4 sm:px-0 lg:px-8 ">
-
-          {/* <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">
-            {product.name}
-          </h1> */}
-          <img
-            src={IxanLogo.src}
-            alt="Ixan Logo"
-            className="w-35 sm:w-45 md:w-55 lg:w-57.75 h-auto mb-2"
-          />
-
-          <h3 className="text-sm sm:text-2xl font-bold mt-2 mb-4">
-            Powerful | Proven | Patented <Image
-              src={IxanLogo}
-              alt="Verified"
-              width={70}
-              height={70}
-              className="inline-block pb-2 object-contain"
+        {/* DOTS */}
+        <div className="mt-3 flex justify-center gap-2">
+          {galleryImages.map((img, index) => (
+            <button
+              key={`dot-${img}`}
+              type="button"
+              onClick={() => handleThumbnailClick(index)}
+              aria-label={`Go to image ${index + 1}`}
+              className={`h-2 w-2 rounded-full transition ${selectedIndex === index
+                ? "bg-[#2477DC]"
+                : "bg-gray-300 hover:bg-gray-400"
+                }`}
             />
-          </h3>
-
-          <p className="text-[#181818] text-sm sm:text-xl font-normal mb-6">
-            {product.description || "No description available"}
-          </p>
-          <div className=" sm:mt-14 mb-4">
-            <p className="text-2xl  font-figtree font-semibold sm:text-[36px] leading-9 tracking-normal">
-              Rs. {displayPrice}/-
-            </p>
-
-            <p className="text-[#181818] text-sm sm:text-xl font-normal mt-3 ">
-              {selectedPack
-                ? `${selectedPack.label} (${selectedPack.quantity} units)`
-                : "Pack Size: 60 Veg Capsules (2-Month Pack)"}
-            </p>
-
-            {/* <p className=" text-[36px] font-semibold ">Rs. {displayPrice}/-</p>
-            <p className="text-gray-600 mb-4">
-              {selectedPack
-                ? `${selectedPack.label} (${selectedPack.quantity} units)`
-                : "Pack Size: 60 Veg Capsules (2-Month Pack)"}
-            </p> */}
-
-            {packs.length > 0 && (
-              <div className="mb-8">
-                <p className="mb-3 text-sm font-semibold text-gray-700">Select Pack Size</p>
-                <div className="flex flex-wrap gap-3">
-                  {packs.map((pack) => {
-                    const packMrp = Number(pack.pricing?.mrp ?? 0);
-                    const isSelected = selectedPack?.id === pack.id;
-                    return (
-                      <button
-                        key={pack.id}
-                        type="button"
-                        onClick={() => setSelectedPackId(pack.id)}
-                        className={`rounded-lg border px-4 py-3 text-left transition ${isSelected
-                          ? "border-[#0065A6] bg-[#0065A6]/10"
-                          : "border-[#C5C5C5] hover:border-[#0065A6]/50"
-                          }`}
-                      >
-                        <p className="text-sm font-semibold text-gray-900">{pack.label}</p>
-                        {/* <p className="text-xs text-gray-600">Qty: {pack.quantity}</p> */}
-                        <p className="text-sm font-bold text-[#0065A6]">Rs. {packMrp}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* QUANTITY + BUTTON */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:mt-16 ">
-
-              {/* QUANTITY */}
-              <div className="inline-flex items-center rounded-md border border-[#C5C5C5]">
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
-                  className="h-10 w-10 text-lg hover:bg-gray-100"
-                >
-                  -
-                </button>
-
-                <span className="w-10 text-center font-semibold">
-                  {quantity}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => setQuantity((prev) => prev + 1)}
-                  className="h-10 w-10 text-lg hover:bg-gray-100"
-                >
-                  +
-                </button>
-              </div>
-
-              <p className="text-sm text-gray-600">
-                {quantity} pack(s) x {selectedPackQuantity} units = {totalUnits} units
-              </p>
-
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={isAddingToCart}
-                className="rounded-full bg-[#0065A6] min-w-56 px-9 py-4 font-medium text-white disabled:opacity-70"
-              >
-                {isAddingToCart ? "Adding..." : isSelectedVariantInCart ? "Go to Cart" : "Add to Cart"}
-              </button>
-
-
-
-            </div>
-
-          </div>
+          ))}
         </div>
       </div>
+    )}
+  </section>
+
+  {/* RIGHT: PRODUCT DETAILS */}
+  <section className="mt-4 pb-4 sm:mt-12 px-4 sm:px-0 lg:px-8">
+    {/* LOGO */}
+    <Image
+      src={IxanLogo}
+      alt="Ixan Logo"
+      width={230}
+      height={100}
+      priority
+      className="w-35 sm:w-45 md:w-55 lg:w-[231px] h-auto mb-2"
+    />
+
+    {/* TITLE */}
+    <h3 className="text-sm sm:text-2xl font-bold mt-2 mb-4 flex items-center gap-2 flex-wrap">
+      Powerful | Proven | Patented
+
+      <Image
+        src={IxanLogo}
+        alt="Verified"
+        width={70}
+        height={70}
+        className="inline-block pb-2 object-contain"
+      />
+    </h3>
+
+    {/* DESCRIPTION */}
+    <p className="text-[#181818] text-sm sm:text-xl font-normal mb-6 leading-relaxed">
+      {product?.description || "No description available"}
+    </p>
+
+    <div className="sm:mt-14 mb-4">
+      {/* PRICE */}
+      <p className="text-3xl sm:text-4xl font-semibold leading-9">
+        {new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR",
+        }).format(displayPrice)}
+      </p>
+
+      {/* PACK INFO */}
+      <p className="text-[#181818] text-sm sm:text-xl font-normal mt-3">
+        Pack Size: {capsulesPerUnit} Veg Capsules ({packDurationMonths}-Month Pack)
+      </p>
+     
+
+      {/* PACK SELECTION */}
+      {packs?.length > 0 && (
+        <section className="mb-8 mt-6">
+          <p className="mb-3 text-sm font-semibold text-gray-700">
+            Select Pack Size
+          </p>
+
+          <div className="flex flex-wrap gap-3">
+            {packs.map((pack) => {
+              const packMrp = Number(pack?.pricing?.mrp ?? 0);
+              const isSelected = selectedPack?.id === pack.id;
+
+              return (
+                <button
+                  key={pack.id}
+                  type="button"
+                  onClick={() => setSelectedPackId(pack.id)}
+                  aria-label={`Select ${pack.label}`}
+                  className={`rounded-lg border px-4 py-3 text-left transition-all duration-200 ${isSelected
+                    ? "border-[#0065A6] bg-[#0065A6]/10"
+                    : "border-[#C5C5C5] hover:border-[#0065A6]/50"
+                    }`}
+                >
+                  <p className="text-sm font-semibold text-gray-900">
+                    {pack.label}
+                  </p>
+
+                  <p className="text-sm font-bold text-[#0065A6]">
+                    {new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                    }).format(packMrp)}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* QUANTITY + CART */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:mt-16">
+        {/* QUANTITY */}
+        <div className="inline-flex items-center rounded-md border border-[#C5C5C5] overflow-hidden">
+          {/* MINUS */}
+          <button
+            type="button"
+            aria-label="Decrease quantity"
+            disabled={quantity === 1}
+            onClick={() =>
+              setQuantity((prev) => (prev > 1 ? prev - 1 : 1))
+            }
+            className="h-10 w-10 text-lg hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            -
+          </button>
+
+          {/* COUNT */}
+          <span className="w-10 text-center font-semibold">
+            {quantity}
+          </span>
+
+          {/* PLUS */}
+          <button
+            type="button"
+            aria-label="Increase quantity"
+            onClick={() => setQuantity((prev) => prev + 1)}
+            className="h-10 w-10 text-lg hover:bg-gray-100 transition"
+          >
+            +
+          </button>
+        </div>
+
+        {/* UNIT COUNT */}
+        <p className="text-sm text-gray-600">
+          {quantity} pack(s) × {selectedPackQuantity} units ={" "}
+          <span className="font-semibold">{totalUnits}</span> units
+        </p>
+
+        {/* ADD TO CART */}
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={isAddingToCart}
+          className="rounded-full bg-[#0065A6] min-w-56 px-9 py-4 font-medium text-white transition hover:bg-[#00548c] disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isAddingToCart
+            ? "Adding..."
+            : isSelectedVariantInCart
+              ? "Go to Cart"
+              : "Add to Cart"}
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
 
       <div className="bg-white p-0 lg:p-10 sm:p-10 flex justify-center">
         <div className="bg-[#0e6ea8] px-8 py-8 Sm:px-14 sm:py-14  rounded-0 lg:rounded-2xl sm:rounded-2xl  ">
@@ -668,7 +751,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   ?
                 </h2>
 
-                <p className="text-sm sm:text-base text-[#181818] leading-relaxed">
+                <div className="text-sm sm:text-base text-[#181818] leading-relaxed">
                   ixan+ is a patented, clinically validated antioxidant and anti-inflammatory formulation created to safeguard eyes from the constant stress of modern living.
                   <br /><br />
                   Daily exposure to digital screens, pollution, irregular meals, and chronic stress accelerates oxidative damage impacting the eyes first, as they are among the most sensitive organs in the body.
@@ -680,7 +763,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                     <li>Promotes metabolic balance, relevant for individuals at risk of or experiencing diabetic eye changes</li>
                   </ul>
                   Formulated for modern lifestyles, ixan+ helps protect vision, naturally and effectively.
-                </p>
+                </div>
               </div>
 
               {/* IMAGE SECTION */}
@@ -706,7 +789,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* ITEM 1 */}
                 <div>
-                  <img src="/icons/protect-icon.svg" alt="Protect" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <Image src={ProtectIcon} alt="Protect" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
                   <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     1. Synergistic Antioxidant & Anti-inflammatory Matrix (Patented)
                   </h3>
@@ -717,7 +800,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* ITEM 2 */}
                 <div>
-                  <img src="/icons/eye-icon.svg" alt="Eye" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <Image src={EyeIcon} alt="Eye" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
                   <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     2. Retina-Targeted Protection
                   </h3>
@@ -728,7 +811,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* ITEM 3 */}
                 <div>
-                  <img src="/icons/nuclie-icon.svg" alt="Nuclie" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <Image src={NuclieIcon} alt="Nuclie" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
                   <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     3. Cellular + Organ Wellness
                   </h3>
@@ -739,7 +822,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* ITEM 4 */}
                 <div>
-                  <img src="/icons/research-icon.svg" alt="Research" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <Image src={ResearchIcon} alt="Research" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
                   <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     4. Clinically Referenced Formulation
                   </h3>
@@ -750,7 +833,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
                 {/* ITEM 5 */}
                 <div>
-                  <img src="/icons/approve-icon.svg" alt="Approve" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
+                  <Image src={ApproveIcon} alt="Approve" className="mb-3 h-10 w-10 sm:h-12 sm:w-12" />
                   <h3 className="font-bold text-sm sm:text-base leading-5 sm:leading-6 mb-1">
                     5. Clean Label & Daily-Use Friendly
                   </h3>
