@@ -24,6 +24,7 @@ import { getUserReturns } from "@/services/return.service";
 import { getCurrentUser } from "@/services/auth.service";
 import { createReturnRequest } from "@/services/return.service";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { formatShortUuid } from "@/utils/formatShortUuid";
 
 type RootState = {
     user: { user: unknown };
@@ -983,7 +984,7 @@ export default function ProfilePage() {
                                                                 {productName}
                                                             </h3>
                                                             <p className="text-sm font-semibold text-black">
-                                                                Order <span className="text-[#0065A6]">#{String(orderId).slice(-8).toUpperCase()}</span>
+                                                                Order <span className="text-[#0065A6]">{formatShortUuid(orderId, { prefix: "ORD-", length: 8 })}</span>
                                                             </p>
                                                             <p className="text-xs text-black/50 mt-0.5">
                                                                 {formatDate(createdAt)}
@@ -1223,7 +1224,7 @@ export default function ProfilePage() {
                                                             Return <span className="text-[#0065A6]">#{returnId.slice(-8).toUpperCase()}</span>
                                                         </p>
                                                         <p className="text-xs text-black/55 mt-1">
-                                                            Order #{orderId.slice(-8).toUpperCase()} · {formatDate(createdAt)}
+                                                            Order {formatShortUuid(orderId, { prefix: "ORD-", length: 8 })} · {formatDate(createdAt)}
                                                         </p>
                                                         <p className="mt-2 text-sm text-black/75 line-clamp-2">
                                                             {reason}

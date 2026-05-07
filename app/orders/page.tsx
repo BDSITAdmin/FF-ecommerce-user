@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronRight, Package, Clock3 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { cancelOrder, getOrders } from "@/services/order.service";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { formatShortUuid } from "@/utils/formatShortUuid";
 
 type RootState = {
     user: { user: unknown };
@@ -208,7 +209,7 @@ export default function OrdersPage() {
                                         >
                                             <div>
                                                 <p className="text-sm font-semibold">
-                                                    Order <span className="text-[#0065A6]">#{String(id).slice(-8).toUpperCase()}</span>
+                                                    Order <span className="text-[#0065A6]">{formatShortUuid(id, { prefix: "ORD-", length: 8 })}</span>
                                                 </p>
                                                 <p className="text-xs text-black/55 mt-1">
                                                     {formatDate(createdAt)}
