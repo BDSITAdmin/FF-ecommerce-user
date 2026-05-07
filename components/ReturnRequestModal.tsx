@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, RotateCcw } from "lucide-react";
+import { formatShortUuid } from "@/utils/formatShortUuid";
 
 type ReturnRequestModalProps = {
     isOpen: boolean;
@@ -44,7 +45,7 @@ export default function ReturnRequestModal({
                             <div>
                                 <h2 className="text-lg font-bold text-black">Return Order</h2>
                                 <p className="text-xs text-black/60">
-                                    Order #{orderId.slice(-8).toUpperCase()}
+                                    Order {formatShortUuid(orderId, { prefix: "ORD-", length: 8 })}
                                 </p>
                             </div>
                             <button
