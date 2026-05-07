@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import { ArrowLeft, ChevronRight, Package, Clock3 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { cancelOrder, getOrders } from "@/services/order.service";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 type RootState = {
     user: { user: unknown };
@@ -22,8 +22,9 @@ const statusColor: Record<string, string> = {
 };
 
 export default function OrdersPage() {
-    const router = useRouter();
     const user = useSelector((state: RootState) => state.user.user);
+
+    useRequireAuth();
 
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -35,12 +36,6 @@ export default function OrdersPage() {
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [totalPages, setTotalPages] = useState(1);
-
-    useEffect(() => {
-        if (!user) {
-            router.push("/login");
-        }
-    }, [user, router]);
 
     useEffect(() => {
         if (!user) return;
