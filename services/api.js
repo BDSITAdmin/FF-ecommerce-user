@@ -3,7 +3,6 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
   withCredentials: true,
 });
 /* ======================================================
@@ -30,11 +29,10 @@ const forceLogout = async () => {
   try {
     await axios.post(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/logout`,
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/logout`,
       {},
       { withCredentials: true }
     );
-  } catch (e) {
+  } catch {
     // ignore errors
   }
 
@@ -58,6 +56,10 @@ const isAuthRoute = (url = "") => {
     "/api/v1/auth/refresh",
     "/api/v1/auth/logout",
   ].some((route) => url?.includes(route));
+};
+
+const isPublicRoute = (url = "") => {
+  return ["/api/v1/products"].some((route) => url?.includes(route));
 };
 
 /* ======================================================
@@ -87,6 +89,7 @@ api.interceptors.response.use(
 
   async (error) => {
     const originalRequest = error.config;
+    const hadAuthHeader = Boolean(originalRequest?.headers?.Authorization);
 
     if (!originalRequest) {
       return Promise.reject(error);
@@ -97,9 +100,17 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Public endpoints should not hard-redirect anonymous/expired sessions to login.
+    if (error.response?.status === 401 && isPublicRoute(originalRequest.url)) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return Promise.reject(error);
+    }
+
     //  Handle 401
     if (
       error.response?.status === 401 &&
+      hadAuthHeader &&
       !originalRequest._retry &&
       !isAuthRoute(originalRequest.url)
     ) {
@@ -119,7 +130,6 @@ api.interceptors.response.use(
 
       try {
         const res = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`,
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/auth/refresh`,
           {},
           { withCredentials: true }

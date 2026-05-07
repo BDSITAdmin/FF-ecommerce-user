@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getProducts } from "../services/product.service";
 import ProductDetails from "../components/ProductDetails";
+import PageLoader from "../components/PageLoader";
 
 const getFirstProductId = (products: any[]) => {
   const first = products?.[0];
@@ -33,7 +34,7 @@ export default function Home() {
     };
   }, []);
 
-  if (loading) return <div className="p-10">Loading...</div>;
+  if (loading) return <PageLoader label="Loading Products" fullScreen={false} />;
   if (!productId) return <div className="p-10">No products available.</div>;
 
   return <ProductDetails productId={productId} />;

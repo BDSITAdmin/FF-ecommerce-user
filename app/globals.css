@@ -4,6 +4,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-primary: #0065a6;
+  --brand-primary-soft: rgba(0, 101, 166, 0.2);
   --font-figtree: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -81,6 +83,59 @@ select.input-field {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes loader-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loader-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.loader-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border-style: solid;
+}
+
+.loader-ring-outer {
+  border-width: 4px;
+  border-color: var(--brand-primary-soft);
+  border-top-color: var(--brand-primary);
+  animation: loader-rotate 1s linear infinite;
+}
+
+.loader-ring-inner {
+  inset: 8px;
+  border-width: 3px;
+  border-color: rgba(0, 101, 166, 0.12);
+  border-bottom-color: var(--brand-primary);
+  animation: loader-rotate 0.8s linear infinite reverse;
+}
+
+.loader-dot {
+  position: absolute;
+  inset: 50%;
+  height: 8px;
+  width: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  border-radius: 9999px;
+  background: var(--brand-primary);
+  box-shadow: 0 0 0 6px rgba(0, 101, 166, 0.12);
+  animation: loader-pulse 1.2s ease-in-out infinite;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
