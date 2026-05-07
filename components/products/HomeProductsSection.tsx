@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import api from "@/services/api";
@@ -20,7 +21,7 @@ import {
 
 export default function HomeProductsSection() {
   const router = useRouter();
-  const dispatch = useDispatch<any>();
+  const dispatch = useDispatch();
   const user = useSelector((state: { user: { user: unknown } }) => state.user.user);
   const cartItems = useSelector((state: { cart: { items: unknown[] } }) => state.cart.items);
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,14 +34,18 @@ export default function HomeProductsSection() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const savedWishlist = localStorage.getItem("wishlist");
+      const parsed = savedWishlist ? JSON.parse(savedWishlist) : [];
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
-    const savedWishlist = localStorage.getItem("wishlist");
-    if (savedWishlist) {
-      setWishlist(JSON.parse(savedWishlist));
-    }
-
     api
       .get("/api/v1/products", {
         params: {
@@ -112,7 +117,7 @@ export default function HomeProductsSection() {
       router.push("/login");
       return;
     }
-    dispatch((addToCartAsync as any)({ product, quantity: 1 }));
+    dispatch(addToCartAsync({ product, quantity: 1 }));
   };
 
   return (
@@ -320,10 +325,12 @@ export default function HomeProductsSection() {
                           </div>
                         )}
 
-                        <img
+                        <Image
                           src={product.images?.[0] || "/api/placeholder/400/400"}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          width={400}
+                          height={400}
                         />
 
                         <div className="absolute top-3 right-3">

@@ -5,7 +5,13 @@ import { getProducts } from "../services/product.service";
 import ProductDetails from "../components/ProductDetails";
 import PageLoader from "../components/PageLoader";
 
-const getFirstProductId = (products: any[]) => {
+type ProductIdCandidate = {
+  id?: string | number;
+  _id?: string | number;
+  productId?: string | number;
+};
+
+const getFirstProductId = (products: ProductIdCandidate[]) => {
   const first = products?.[0];
   return first?.id ?? first?._id ?? first?.productId ?? "";
 };
