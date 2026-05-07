@@ -185,7 +185,7 @@ export default function CheckoutPage() {
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="rounded-3xl border border-black/10 bg-white p-8 shadow-2xl">
+          <div className="rounded-3xl border border-black/10 bg-white p-8 mb-4 shadow-2xl">
             <div className="mb-8">
               <p className="text-sm uppercase tracking-[0.2em] text-black/60">Secure Checkout</p>
               <h1 className="mt-2 text-3xl font-bold text-black">Checkout</h1>
@@ -394,14 +394,16 @@ export default function CheckoutPage() {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={nextStep}
-                disabled={isSubmitting || !isValid}
-                className="rounded-2xl bg-[#0065A6] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {getPrimaryButtonLabel()}
-              </button>
+              {!isReviewStep && (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={isSubmitting || !isValid}
+                  className="rounded-2xl bg-[#0065A6] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {getPrimaryButtonLabel()}
+                </button>
+              )}
             </div>
           </div>
 
